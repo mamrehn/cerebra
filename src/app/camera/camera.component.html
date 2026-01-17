@@ -307,15 +307,15 @@
                         <div class="imu-values">
                             <div class="imu-value">
                                 <span class="axis roll">Roll</span>
-                                <span class="value">{{ orientation.roll?.toFixed(1) || '0.0' }}°</span>
+                                <span class="value">{{ orientation.roll.toFixed(1) }}°</span>
                             </div>
                             <div class="imu-value">
                                 <span class="axis pitch">Pitch</span>
-                                <span class="value">{{ orientation.pitch?.toFixed(1) || '0.0' }}°</span>
+                                <span class="value">{{ orientation.pitch.toFixed(1) }}°</span>
                             </div>
                             <div class="imu-value">
                                 <span class="axis yaw">Yaw</span>
-                                <span class="value">{{ orientation.yaw?.toFixed(1) || '0.0' }}°</span>
+                                <span class="value">{{ orientation.yaw.toFixed(1) }}°</span>
                             </div>
                         </div>
                     </div>
@@ -342,7 +342,7 @@
             <div class="ai-info-panel card">
                 <div class="card-body py-2">
                     <span class="badge bg-success me-2">{{ latestDetection.model }}</span>
-                    <span class="text-muted">Latency: {{ latestDetection.latency_ms?.toFixed(1) }}ms</span>
+                    <span class="text-muted">Latency: {{ latestDetection.latency_ms.toFixed(1) }}ms</span>
                     <span class="ms-3 text-muted">Detections: {{ getDetectionCount() }}</span>
                 </div>
             </div>

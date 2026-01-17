@@ -4,7 +4,7 @@ import {
     fakeAsync,
     tick,
 } from "@angular/core/testing";
-import {ReactiveFormsModule} from "@angular/forms";
+import {ReactiveFormsModule, FormsModule} from "@angular/forms";
 import {CameraComponent} from "./camera.component";
 import {RosService} from "../shared/services/ros-service/ros.service";
 import {By} from "@angular/platform-browser";
@@ -18,13 +18,13 @@ describe("CameraComponent", () => {
     let component: CameraComponent;
     let fixture: ComponentFixture<CameraComponent>;
     let rosService: RosService;
-    let spyUnsubscribeCamera: jasmine.Spy<() => void>;
+    let spyUnsubscribeCameraCbor: jasmine.Spy<() => void>;
     let cameraService: CameraService;
 
     beforeEach(async () => {
         TestBed.configureTestingModule({
             declarations: [CameraComponent, HorizontalSliderComponent],
-            imports: [ReactiveFormsModule, NgbPopover, HttpClientTestingModule],
+            imports: [ReactiveFormsModule, FormsModule, NgbPopover, HttpClientTestingModule],
             providers: [RosService, CameraService, ApiService],
         }).compileComponents();
         rosService = TestBed.inject(RosService);
@@ -32,17 +32,11 @@ describe("CameraComponent", () => {
         fixture = TestBed.createComponent(CameraComponent);
         component = fixture.componentInstance;
         fixture.detectChanges();
-        spyUnsubscribeCamera = spyOn(rosService, "unsubscribeCameraTopic");
+        spyUnsubscribeCameraCbor = spyOn(rosService, "unsubscribeCameraCborTopic");
     });
 
     it("should create", () => {
         expect(component).toBeTruthy();
-    });
-
-    it("should subscribe to the message receiver when the component is instantiated", () => {
-        const spy = spyOn(cameraService, "subscribeCameraReseiver");
-        component.ngOnInit();
-        expect(spy).toHaveBeenCalled();
     });
 
     it("setSize should send the size message via setPreviewSize method in rosService", fakeAsync(() => {
@@ -69,12 +63,6 @@ describe("CameraComponent", () => {
         expect(spyStopCamera).toHaveBeenCalled();
     });
 
-    it("should display an error image when receiving error messages from the backend", fakeAsync(() => {
-        rosService.cameraReceiver$.next("Camera not available");
-        tick(1000);
-        expect(component.imageSrc).toMatch("../../assets/camera-error-image");
-    }));
-
     it("should change the running state of the camera when clicking camera icon", () => {
         const spyOnToggleCamera = spyOn(component, "toggleCameraState");
         const toggleBtn = fixture.debugElement.query(By.css("#toggleCamera"));
@@ -89,14 +77,14 @@ describe("CameraComponent", () => {
         expect(cameraActiveState).toBeFalse;
     });
 
-    it("startCamera should subscribe to the camera topic", () => {
-        const spySubscribe = spyOn(rosService, "subscribeCameraTopic");
+    it("startCamera should subscribe to the CBOR camera topic", () => {
+        const spySubscribe = spyOn(rosService, "subscribeCameraCborTopic");
         component.startCamera();
         expect(spySubscribe).toHaveBeenCalled();
     });
 
     it("stopCamera should get called when OnDestroy is called", () => {
         component.ngOnDestroy();
-        expect(spyUnsubscribeCamera).toHaveBeenCalled();
+        expect(spyUnsubscribeCameraCbor).toHaveBeenCalled();
     });
 });

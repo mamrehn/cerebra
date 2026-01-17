@@ -76,13 +76,13 @@ describe("CameraService", () => {
         expect(service.cameraSettings.getValue().refreshRate).toBe(0.5);
     });
 
-    it("should return camera imageString over ros topic", () => {
-        service.subscribeCameraReseiver();
-        let res: string | undefined;
-        service.cameraReciver$.subscribe((response) => {
+    it("should return camera CBOR binary data over ros topic", () => {
+        let res: Uint8Array | undefined;
+        service.cameraCborReceiver$.subscribe((response: Uint8Array) => {
             res = response;
         });
-        rosService.cameraReceiver$.next("TestString");
-        expect(res).toBe("TestString");
+        const testData = new Uint8Array([0xFF, 0xD8, 0xFF, 0xE0]); // JPEG magic bytes
+        rosService.cameraCborReceiver$.next(testData);
+        expect(res).toEqual(testData);
     });
 });
