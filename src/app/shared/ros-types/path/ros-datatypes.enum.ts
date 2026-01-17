@@ -5,6 +5,14 @@ export enum rosDataTypes {
     int32MultiArray = "std_msgs/Int32MultiArray",
     float64 = "std_msgs/Float64",
     string = "std_msgs/String",
+
+    // sensor msgs
+    compressedImage = "sensor_msgs/CompressedImage",
+    imu = "sensor_msgs/Imu",
+
+    // geometry msgs
+    vector3Stamped = "geometry_msgs/Vector3Stamped",
+
     // msg
     motorSettings = "datatypes/msg/MotorSettings",
     chatMessage = "datatypes/msg/ChatMessage",

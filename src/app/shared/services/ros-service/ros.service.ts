@@ -14,6 +14,17 @@ import {DiagnosticStatus} from "../../ros-types/msg/diagnostic-status.message";
 import {JointTrajectoryMessage} from "../../ros-types/msg/joint-trajectory-message";
 import {rosDataTypes} from "../../ros-types/path/ros-datatypes.enum";
 import {rosTopics} from "../../ros-types/path/ros-topics.enum";
+import {
+    AiDetectionMessage,
+    AiConfig,
+    AiAvailableModelsMessage,
+    AiCurrentModelMessage,
+} from "../../interfaces/ai-detection.interface";
+import {
+    ImuData,
+    Vector3Stamped,
+    ImuConfig,
+} from "../../interfaces/imu-data.interface";
 import {rosServices} from "../../ros-types/path/ros-services.enum";
 import {
     SetVoiceAssistantStateRequest,
@@ -107,6 +118,21 @@ export class RosService implements IRosService {
         SolidStateRelayState | undefined
     > = new BehaviorSubject<SolidStateRelayState | undefined>(undefined);
 
+    // CBOR Camera (binary JPEG, faster than base64)
+    cameraCborReceiver$: Subject<Uint8Array> = new Subject<Uint8Array>();
+
+    // AI Detection subjects
+    aiDetectionsReceiver$: Subject<AiDetectionMessage> = new Subject<AiDetectionMessage>();
+    aiAvailableModelsReceiver$: BehaviorSubject<AiAvailableModelsMessage | null> =
+        new BehaviorSubject<AiAvailableModelsMessage | null>(null);
+    aiCurrentModelReceiver$: BehaviorSubject<AiCurrentModelMessage | null> =
+        new BehaviorSubject<AiCurrentModelMessage | null>(null);
+
+    // IMU subjects
+    imuDataReceiver$: Subject<ImuData> = new Subject<ImuData>();
+    imuAccelerometerReceiver$: Subject<Vector3Stamped> = new Subject<Vector3Stamped>();
+    imuGyroscopeReceiver$: Subject<Vector3Stamped> = new Subject<Vector3Stamped>();
+
     private ros!: ROSLIB.Ros;
 
     private motorCurrentTopic!: ROSLIB.Topic;
@@ -125,6 +151,22 @@ export class RosService implements IRosService {
     private voiceAssistantStateTopic!: ROSLIB.Topic<VoiceAssistantState>;
     private chatIsListeningTopic!: ROSLIB.Topic<ChatIsListening>;
     private solidStateRelayStateTopic!: ROSLIB.Topic<SolidStateRelayState>;
+
+    // CBOR Camera topic (binary JPEG)
+    private cameraCborTopic!: ROSLIB.Topic;
+    private cameraConfigTopic!: ROSLIB.Topic;
+
+    // AI Detection topics
+    private aiDetectionsTopic!: ROSLIB.Topic;
+    private aiConfigTopic!: ROSLIB.Topic;
+    private aiAvailableModelsTopic!: ROSLIB.Topic;
+    private aiCurrentModelTopic!: ROSLIB.Topic;
+
+    // IMU topics
+    private imuDataTopic!: ROSLIB.Topic;
+    private imuAccelerometerTopic!: ROSLIB.Topic;
+    private imuGyroscopeTopic!: ROSLIB.Topic;
+    private imuConfigTopic!: ROSLIB.Topic;
 
     private existTokenService!: ROSLIB.Service<
         Record<string, never>,
@@ -274,6 +316,53 @@ export class RosService implements IRosService {
             rosDataTypes.solidStateRelayState,
         );
 
+        // CBOR Camera topic (binary JPEG - much faster than base64)
+        this.cameraCborTopic = this.createRosTopicWithCompression(
+            rosTopics.cameraImageCbor,
+            rosDataTypes.compressedImage,
+            'cbor',
+        );
+        this.cameraConfigTopic = this.createRosTopic(
+            rosTopics.cameraConfig,
+            rosDataTypes.string,
+        );
+
+        // AI Detection topics
+        this.aiDetectionsTopic = this.createRosTopic(
+            rosTopics.aiDetections,
+            rosDataTypes.string,
+        );
+        this.aiConfigTopic = this.createRosTopic(
+            rosTopics.aiConfig,
+            rosDataTypes.string,
+        );
+        this.aiAvailableModelsTopic = this.createRosTopic(
+            rosTopics.aiAvailableModels,
+            rosDataTypes.string,
+        );
+        this.aiCurrentModelTopic = this.createRosTopic(
+            rosTopics.aiCurrentModel,
+            rosDataTypes.string,
+        );
+
+        // IMU topics
+        this.imuDataTopic = this.createRosTopic(
+            rosTopics.imuData,
+            rosDataTypes.imu,
+        );
+        this.imuAccelerometerTopic = this.createRosTopic(
+            rosTopics.imuAccelerometer,
+            rosDataTypes.vector3Stamped,
+        );
+        this.imuGyroscopeTopic = this.createRosTopic(
+            rosTopics.imuGyroscope,
+            rosDataTypes.vector3Stamped,
+        );
+        this.imuConfigTopic = this.createRosTopic(
+            rosTopics.imuConfig,
+            rosDataTypes.string,
+        );
+
         this.applyMotorSettingsService = this.createRosService(
             rosServices.applyMotorSettings,
             rosDataTypes.applyMotorSettings,
@@ -339,6 +428,23 @@ export class RosService implements IRosService {
             ros: this.ros,
             name: topicName,
             messageType: topicMessageType,
+        });
+    }
+
+    /**
+     * Create a ROS topic with compression (CBOR for binary data)
+     * CBOR enables binary WebSocket messages, avoiding base64 overhead
+     */
+    private createRosTopicWithCompression<T>(
+        topicName: string,
+        topicMessageType: string,
+        compression: 'cbor' | 'png' | 'none' = 'cbor',
+    ): ROSLIB.Topic<T> {
+        return new ROSLIB.Topic({
+            ros: this.ros,
+            name: topicName,
+            messageType: topicMessageType,
+            compression: compression,
         });
     }
 
@@ -789,5 +895,146 @@ export class RosService implements IRosService {
 
     publishProgramInput(input: string, mpid: number) {
         this.programInputTopic.publish({input, mpid});
+    }
+
+    // ==================== CBOR Camera Methods ====================
+
+    /**
+     * Subscribe to CBOR camera topic (binary JPEG, faster than base64)
+     * Returns raw JPEG bytes as Uint8Array
+     */
+    subscribeCameraCborTopic() {
+        this.cameraCborTopic.subscribe((message: any) => {
+            // message.data is a Uint8Array containing raw JPEG bytes
+            if (message.data) {
+                // Convert from array-like to Uint8Array if needed
+                const data = message.data instanceof Uint8Array
+                    ? message.data
+                    : new Uint8Array(message.data);
+                this.cameraCborReceiver$.next(data);
+            }
+        });
+    }
+
+    unsubscribeCameraCborTopic() {
+        this.cameraCborTopic.unsubscribe();
+    }
+
+    /**
+     * Publish camera configuration
+     */
+    publishCameraConfig(config: {fps?: number; quality?: number; resolution?: [number, number]}) {
+        if (!this.cameraConfigTopic) {
+            console.error("ROS is not connected.");
+            return;
+        }
+        const message = new ROSLIB.Message({data: JSON.stringify(config)});
+        this.cameraConfigTopic.publish(message);
+    }
+
+    // ==================== AI Detection Methods ====================
+
+    /**
+     * Subscribe to AI detections (on-demand: backend only runs inference when subscribed)
+     */
+    subscribeAiDetectionsTopic() {
+        this.aiDetectionsTopic.subscribe((message: any) => {
+            try {
+                const detection: AiDetectionMessage = JSON.parse(message.data);
+                this.aiDetectionsReceiver$.next(detection);
+            } catch (e) {
+                console.error("Failed to parse AI detection message:", e);
+            }
+        });
+
+        // Also subscribe to model info topics
+        this.aiAvailableModelsTopic.subscribe((message: any) => {
+            try {
+                const models: AiAvailableModelsMessage = JSON.parse(message.data);
+                this.aiAvailableModelsReceiver$.next(models);
+            } catch (e) {
+                console.error("Failed to parse available models:", e);
+            }
+        });
+
+        this.aiCurrentModelTopic.subscribe((message: any) => {
+            try {
+                const currentModel: AiCurrentModelMessage = JSON.parse(message.data);
+                this.aiCurrentModelReceiver$.next(currentModel);
+            } catch (e) {
+                console.error("Failed to parse current model:", e);
+            }
+        });
+    }
+
+    unsubscribeAiDetectionsTopic() {
+        this.aiDetectionsTopic.unsubscribe();
+        this.aiAvailableModelsTopic.unsubscribe();
+        this.aiCurrentModelTopic.unsubscribe();
+    }
+
+    /**
+     * Publish AI configuration (model selection, confidence threshold, etc.)
+     */
+    publishAiConfig(config: AiConfig) {
+        if (!this.aiConfigTopic) {
+            console.error("ROS is not connected.");
+            return;
+        }
+        const message = new ROSLIB.Message({data: JSON.stringify(config)});
+        this.aiConfigTopic.publish(message);
+    }
+
+    // ==================== IMU Methods ====================
+
+    /**
+     * Subscribe to full IMU data (accelerometer + gyroscope)
+     */
+    subscribeImuDataTopic() {
+        this.imuDataTopic.subscribe((message: any) => {
+            this.imuDataReceiver$.next(message as ImuData);
+        });
+    }
+
+    unsubscribeImuDataTopic() {
+        this.imuDataTopic.unsubscribe();
+    }
+
+    /**
+     * Subscribe to accelerometer only (lighter weight)
+     */
+    subscribeImuAccelerometerTopic() {
+        this.imuAccelerometerTopic.subscribe((message: any) => {
+            this.imuAccelerometerReceiver$.next(message as Vector3Stamped);
+        });
+    }
+
+    unsubscribeImuAccelerometerTopic() {
+        this.imuAccelerometerTopic.unsubscribe();
+    }
+
+    /**
+     * Subscribe to gyroscope only (lighter weight)
+     */
+    subscribeImuGyroscopeTopic() {
+        this.imuGyroscopeTopic.subscribe((message: any) => {
+            this.imuGyroscopeReceiver$.next(message as Vector3Stamped);
+        });
+    }
+
+    unsubscribeImuGyroscopeTopic() {
+        this.imuGyroscopeTopic.unsubscribe();
+    }
+
+    /**
+     * Publish IMU configuration (frequency: 25, 50, 100, 200, 250 Hz)
+     */
+    publishImuConfig(config: ImuConfig) {
+        if (!this.imuConfigTopic) {
+            console.error("ROS is not connected.");
+            return;
+        }
+        const message = new ROSLIB.Message({data: JSON.stringify(config)});
+        this.imuConfigTopic.publish(message);
     }
 }

@@ -58,3 +58,164 @@ video {
     fill: $pink-color !important;
     transition: fill 0.15s ease;
 }
+
+// ==================== Canvas Container ====================
+
+.canvas-container {
+    position: relative;
+    display: inline-block;
+}
+
+.camera-canvas {
+    display: block;
+    background-color: #1a1a2e;
+    border-radius: 8px;
+}
+
+.ai-overlay-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    border-radius: 8px;
+}
+
+.camera-placeholder {
+    display: block;
+    border-radius: 8px;
+}
+
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(0, 0, 0, 0.5);
+    border-radius: 8px;
+    z-index: 10;
+}
+
+// ==================== IMU Panel ====================
+
+.imu-panel {
+    background-color: rgba(26, 26, 46, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    min-width: 280px;
+    color: $white-color;
+
+    .card-header {
+        background-color: rgba(255, 255, 255, 0.05);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 0.75rem 1rem;
+
+        h5 {
+            color: $white-color;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+
+            svg path {
+                fill: $pink-color;
+            }
+        }
+    }
+
+    .card-body {
+        padding: 1rem;
+    }
+}
+
+.imu-section {
+    h6 {
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 0.85rem;
+        margin-bottom: 0.5rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+}
+
+.imu-values {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.imu-value {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 70px;
+    padding: 0.5rem;
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+
+    .axis {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        margin-bottom: 0.25rem;
+
+        &.x { color: #FF6B6B; }
+        &.y { color: #4ECDC4; }
+        &.z { color: #45B7D1; }
+        &.roll { color: #FF6B6B; }
+        &.pitch { color: #4ECDC4; }
+        &.yaw { color: #45B7D1; }
+    }
+
+    .value {
+        font-family: 'Courier New', monospace;
+        font-size: 0.9rem;
+        color: $white-color;
+    }
+}
+
+// ==================== AI Info Panel ====================
+
+.ai-info-panel {
+    background-color: rgba(26, 26, 46, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    color: $white-color;
+
+    .card-body {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .badge {
+        font-size: 0.8rem;
+    }
+
+    .text-muted {
+        color: rgba(255, 255, 255, 0.6) !important;
+        font-size: 0.85rem;
+    }
+}
+
+// ==================== Form Elements ====================
+
+.form-select {
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: $white-color;
+
+    &:focus {
+        background-color: rgba(255, 255, 255, 0.15);
+        border-color: $pink-color;
+        box-shadow: 0 0 0 0.2rem rgba(236, 72, 153, 0.25);
+        color: $white-color;
+    }
+
+    option {
+        background-color: #1a1a2e;
+        color: $white-color;
+    }
+}

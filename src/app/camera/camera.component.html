@@ -1,5 +1,7 @@
 <div class="container-fluid pink-corner-frame">
-    <div class="row mt-5 mb-5">
+    <!-- Controls Row -->
+    <div class="row mt-5 mb-3">
+        <!-- Camera Toggle -->
         <div class="col-2 md-auto text-right">
             <div
                 class="custom-control custom-switch custom-switch-pib cameraIcon d-inline-block video-nav-element"
@@ -22,6 +24,8 @@
                 ></label>
             </div>
         </div>
+
+        <!-- Resolution Selector -->
         <div class="col-2 md-auto">
             <div
                 ngbDropdown
@@ -71,6 +75,79 @@
             </div>
         </div>
 
+        <!-- AI Toggle -->
+        <div class="col-2 md-auto">
+            <div
+                class="custom-control custom-switch custom-switch-pib d-inline-block video-nav-element"
+                id="aiToggle">
+                <input
+                    class="custom-control-input"
+                    type="checkbox"
+                    id="toggleAi"
+                    [formControl]="toggleAi"
+                    (input)="toggleAiState()" />
+                <label
+                    class="custom-control-label"
+                    for="toggleAi">
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        height="24px"
+                        viewBox="0 -960 960 960"
+                        width="24px">
+                        <path d="M160-200v-80h80v-280q0-83 50-147.5T420-792v-28q0-25 17.5-42.5T480-880q25 0 42.5 17.5T540-820v28q80 20 130 84.5T720-560v280h80v80H160Zm320-300Zm0 420q-33 0-56.5-23.5T400-160h160q0 33-23.5 56.5T480-80ZM320-280h320v-280q0-66-47-113t-113-47q-66 0-113 47t-47 113v280Z" />
+                    </svg>
+                    <span class="ms-1">AI</span>
+                </label>
+            </div>
+        </div>
+
+        <!-- AI Model Selector (shown when AI is active) -->
+        <div class="col-2 md-auto" *ngIf="aiEnabled">
+            <div ngbDropdown class="d-inline-block">
+                <button
+                    type="button"
+                    class="btn cameraIcon video-nav-element"
+                    id="aiModelDropdown"
+                    ngbDropdownToggle>
+                    <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24">
+                        <path d="M480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Z"/>
+                    </svg>
+                    <span>{{ currentModel?.model || 'Select Model' }}</span>
+                </button>
+                <div ngbDropdownMenu aria-labelledby="aiModelDropdown">
+                    <button
+                        *ngFor="let model of availableModels"
+                        ngbDropdownItem
+                        (click)="selectAiModel(model.name)">
+                        {{ model.name }} ({{ model.type }})
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- IMU Toggle -->
+        <div class="col-2 md-auto">
+            <div
+                class="custom-control custom-switch custom-switch-pib d-inline-block video-nav-element"
+                id="imuToggle">
+                <input
+                    class="custom-control-input"
+                    type="checkbox"
+                    id="toggleImu"
+                    [formControl]="toggleImu"
+                    (input)="toggleImuState()" />
+                <label
+                    class="custom-control-label"
+                    for="toggleImu">
+                    <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px">
+                        <path d="M480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-80q-100 0-170-70t-70-170q0-100 70-170t170-70q100 0 170 70t70 170q0 100-70 170t-170 70Z"/>
+                    </svg>
+                    <span class="ms-1">IMU</span>
+                </label>
+            </div>
+        </div>
+
+        <!-- Video Settings -->
         <div class="col md-auto text-right pr-5">
             <button
                 type="button"
@@ -131,15 +208,144 @@
             </ng-template>
         </div>
     </div>
+
+    <!-- Camera and IMU Row -->
     <div class="row justify-content-center pb-5 mb-5">
+        <!-- Camera Canvas with AI Overlay -->
         <div
-            class="col-auto pb-5 d-flex justify-content-center"
+            class="col-auto pb-5 d-flex justify-content-center position-relative"
             id="cameraColumn"
             #videobox>
+            <!-- Loading Spinner -->
+            <div *ngIf="isLoading" class="loading-overlay">
+                <div class="spinner-border text-light" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+
+            <!-- Canvas container for camera + AI overlay -->
+            <div class="canvas-container" [style.max-height.px]="cameraSettings?.resY || 480">
+                <!-- Main camera canvas -->
+                <canvas
+                    #cameraCanvas
+                    [width]="cameraSettings?.resX || 640"
+                    [height]="cameraSettings?.resY || 480"
+                    class="camera-canvas">
+                </canvas>
+                <!-- AI overlay canvas (transparent, on top) -->
+                <canvas
+                    *ngIf="aiEnabled"
+                    #aiOverlayCanvas
+                    [width]="cameraSettings?.resX || 640"
+                    [height]="cameraSettings?.resY || 480"
+                    class="ai-overlay-canvas">
+                </canvas>
+            </div>
+
+            <!-- Placeholder when camera is off -->
             <img
-                [src]="imageSrc"
-                alt="camera"
-                width="auto" />
+                *ngIf="!cameraSettings?.isActive"
+                [src]="placeholderImage"
+                alt="camera placeholder"
+                class="camera-placeholder"
+                [style.max-height.px]="cameraSettings?.resY || 480" />
+        </div>
+
+        <!-- IMU Panel (shown when IMU is enabled) -->
+        <div *ngIf="imuEnabled" class="col-auto pb-5">
+            <div class="imu-panel card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 -960 960 960" width="20" class="me-2">
+                            <path d="M480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Z"/>
+                        </svg>
+                        IMU Data (BMI270)
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Accelerometer -->
+                    <div class="imu-section">
+                        <h6>Accelerometer (m/s²)</h6>
+                        <div class="imu-values">
+                            <div class="imu-value">
+                                <span class="axis x">X</span>
+                                <span class="value">{{ imuData?.linear_acceleration?.x?.toFixed(3) || '0.000' }}</span>
+                            </div>
+                            <div class="imu-value">
+                                <span class="axis y">Y</span>
+                                <span class="value">{{ imuData?.linear_acceleration?.y?.toFixed(3) || '0.000' }}</span>
+                            </div>
+                            <div class="imu-value">
+                                <span class="axis z">Z</span>
+                                <span class="value">{{ imuData?.linear_acceleration?.z?.toFixed(3) || '0.000' }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Gyroscope -->
+                    <div class="imu-section mt-3">
+                        <h6>Gyroscope (rad/s)</h6>
+                        <div class="imu-values">
+                            <div class="imu-value">
+                                <span class="axis x">X</span>
+                                <span class="value">{{ imuData?.angular_velocity?.x?.toFixed(3) || '0.000' }}</span>
+                            </div>
+                            <div class="imu-value">
+                                <span class="axis y">Y</span>
+                                <span class="value">{{ imuData?.angular_velocity?.y?.toFixed(3) || '0.000' }}</span>
+                            </div>
+                            <div class="imu-value">
+                                <span class="axis z">Z</span>
+                                <span class="value">{{ imuData?.angular_velocity?.z?.toFixed(3) || '0.000' }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Orientation (Roll, Pitch, Yaw) -->
+                    <div class="imu-section mt-3">
+                        <h6>Orientation (degrees)</h6>
+                        <div class="imu-values">
+                            <div class="imu-value">
+                                <span class="axis roll">Roll</span>
+                                <span class="value">{{ orientation.roll?.toFixed(1) || '0.0' }}°</span>
+                            </div>
+                            <div class="imu-value">
+                                <span class="axis pitch">Pitch</span>
+                                <span class="value">{{ orientation.pitch?.toFixed(1) || '0.0' }}°</span>
+                            </div>
+                            <div class="imu-value">
+                                <span class="axis yaw">Yaw</span>
+                                <span class="value">{{ orientation.yaw?.toFixed(1) || '0.0' }}°</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- IMU Frequency Selector -->
+                    <div class="imu-section mt-3">
+                        <label class="form-label">Frequency</label>
+                        <select class="form-select form-select-sm" [(ngModel)]="imuFrequency" (change)="setImuFrequency()">
+                            <option [value]="25">25 Hz</option>
+                            <option [value]="50">50 Hz</option>
+                            <option [value]="100">100 Hz</option>
+                            <option [value]="200">200 Hz</option>
+                            <option [value]="250">250 Hz</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Detection Info (shown when AI is enabled and has detections) -->
+    <div *ngIf="aiEnabled && latestDetection" class="row justify-content-center mb-4">
+        <div class="col-auto">
+            <div class="ai-info-panel card">
+                <div class="card-body py-2">
+                    <span class="badge bg-success me-2">{{ latestDetection.model }}</span>
+                    <span class="text-muted">Latency: {{ latestDetection.latency_ms?.toFixed(1) }}ms</span>
+                    <span class="ms-3 text-muted">Detections: {{ getDetectionCount() }}</span>
+                </div>
+            </div>
         </div>
     </div>
 </div>

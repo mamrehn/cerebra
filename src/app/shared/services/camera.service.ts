@@ -4,6 +4,13 @@ import {UrlConstants} from "../../shared/services/url.constants";
 import {BehaviorSubject, Subject, catchError, throwError} from "rxjs";
 import {Injectable} from "@angular/core";
 import {RosService} from "./ros-service/ros.service";
+import {
+    AiDetectionMessage,
+    AiConfig,
+    AiAvailableModelsMessage,
+    AiCurrentModelMessage,
+} from "../interfaces/ai-detection.interface";
+import {ImuData, Vector3Stamped, ImuConfig} from "../interfaces/imu-data.interface";
 
 @Injectable({
     providedIn: "root",
@@ -22,12 +29,24 @@ export class CameraService {
         this.subscribeCameraQualityFactorReceiver();
         this.subscribeCameraPreviewSizeReceiver();
         this.subscribeCameraTimerPeriodReceiver();
-        this.subscribeCameraReseiver();
     }
     rosCameraQualityFactorReceiver =
         this.rosService.cameraQualityFactorReceiver$;
     rosCameraTimerPeriodReceiver = this.rosService.cameraTimerPeriodReceiver$;
-    cameraReciver$: Subject<string> = new Subject<string>();
+
+    // CBOR binary camera stream (Uint8Array of raw JPEG bytes)
+    cameraCborReceiver$ = this.rosService.cameraCborReceiver$;
+
+    // AI Detection receivers
+    aiDetectionsReceiver$ = this.rosService.aiDetectionsReceiver$;
+    aiAvailableModelsReceiver$ = this.rosService.aiAvailableModelsReceiver$;
+    aiCurrentModelReceiver$ = this.rosService.aiCurrentModelReceiver$;
+
+    // IMU receivers
+    imuDataReceiver$ = this.rosService.imuDataReceiver$;
+    imuAccelerometerReceiver$ = this.rosService.imuAccelerometerReceiver$;
+    imuGyroscopeReceiver$ = this.rosService.imuGyroscopeReceiver$;
+
     cameraSettings: BehaviorSubject<CameraSettings> =
         new BehaviorSubject<CameraSettings>({} as CameraSettings);
 
@@ -108,12 +127,6 @@ export class CameraService {
         );
     }
 
-    subscribeCameraReseiver() {
-        this.rosService.cameraReceiver$.subscribe((message: string) => {
-            this.cameraReciver$.next(message);
-        });
-    }
-
     qualityControlPublish(formControlValue: number) {
         this.cameraSettings.getValue().qualityFactor = formControlValue;
         this.rosService.setQualityFactor(formControlValue);
@@ -130,12 +143,66 @@ export class CameraService {
         this.rosService.setPreviewSize(width, height);
     }
 
+    // ==================== CBOR Camera (Binary JPEG) ====================
+
+    /**
+     * Start CBOR camera stream (binary JPEG, faster than base64)
+     */
     startCamera() {
-        this.rosService.subscribeCameraTopic();
+        this.rosService.subscribeCameraCborTopic();
     }
 
+    /**
+     * Stop CBOR camera stream
+     */
     stopCamera() {
-        this.rosService.unsubscribeCameraTopic();
+        this.rosService.unsubscribeCameraCborTopic();
+    }
+
+    // ==================== AI Detection ====================
+
+    /**
+     * Start AI detection stream (on-demand: backend starts inference when subscribed)
+     */
+    startAiDetection() {
+        this.rosService.subscribeAiDetectionsTopic();
+    }
+
+    /**
+     * Stop AI detection stream
+     */
+    stopAiDetection() {
+        this.rosService.unsubscribeAiDetectionsTopic();
+    }
+
+    /**
+     * Set AI configuration (model, confidence threshold, etc.)
+     */
+    setAiConfig(config: AiConfig) {
+        this.rosService.publishAiConfig(config);
+    }
+
+    // ==================== IMU ====================
+
+    /**
+     * Start full IMU data stream (accelerometer + gyroscope)
+     */
+    startImuData() {
+        this.rosService.subscribeImuDataTopic();
+    }
+
+    /**
+     * Stop IMU data stream
+     */
+    stopImuData() {
+        this.rosService.unsubscribeImuDataTopic();
+    }
+
+    /**
+     * Set IMU configuration (frequency: 25, 50, 100, 200, 250 Hz)
+     */
+    setImuConfig(config: ImuConfig) {
+        this.rosService.publishImuConfig(config);
     }
 
     publishCameraSettings(cameraSettings: CameraSettings) {

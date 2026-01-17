@@ -15,4 +15,20 @@ export enum rosTopics {
     programInput = "/program_input",
     deleteTokenTopic = "/delete_token",
     solidStateRelayState = "/solid_state_relay_state",
+
+    // Camera CBOR (binary JPEG, faster than base64)
+    cameraImageCbor = "/camera/image",
+    cameraConfig = "/camera/config",
+
+    // AI Vision (OAK-D Lite on-demand inference)
+    aiDetections = "/ai/detections",
+    aiConfig = "/ai/config",
+    aiAvailableModels = "/ai/available_models",
+    aiCurrentModel = "/ai/current_model",
+
+    // IMU (OAK-D Lite BMI270 6-axis)
+    imuData = "/imu/data",
+    imuAccelerometer = "/imu/accelerometer",
+    imuGyroscope = "/imu/gyroscope",
+    imuConfig = "/imu/config",
 }
