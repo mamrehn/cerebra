@@ -25,7 +25,7 @@ server.get("/voice-assistant/personality", (req, res, next) => {
     mockData.personality.forEach((personality) => {
         response.push(Personality.getPersonality(personality));
     });
-    return res.status(200).send({voiceAssistantPersonalities: response});
+    return res.status(200).send({ voiceAssistantPersonalities: response });
 });
 
 //getPersonalityByPersonalityId
@@ -93,7 +93,7 @@ server.get("/voice-assistant/chat", (req, res, next) => {
     mockData.chats.forEach((chat) => {
         response.push(Chat.getChat(chat));
     });
-    return res.status(200).send({voiceAssistantChats: response});
+    return res.status(200).send({ voiceAssistantChats: response });
 });
 
 //postChat
@@ -150,7 +150,7 @@ server.get("/voice-assistant/chat/:chatId/messages", (req, res, next) => {
             response.push(Message.getMessage(message));
         }
     });
-    return res.status(200).send({messages: response});
+    return res.status(200).send({ messages: response });
 });
 
 //getMessageByChatIdAndMessageId
@@ -242,7 +242,7 @@ server.put("/camera-settings", (req, res, next) => {
     mockData.cameraSettings.forEach((cam) => {
         if (cam.id == 1) {
             cam.resolution = req.body.resolution;
-            cam.refeshRate = req.body.refeshRate;
+            cam.refreshRate = req.body.refreshRate;
             cam.qualityFactor = req.body.qualityFactor;
             cam.resX = req.body.resX;
             cam.resY = req.body.resY;
@@ -259,7 +259,7 @@ server.get("/bricklet", (req, res, next) => {
     mockData.bricklet.forEach((bricklet) => {
         response.push(Bricklet.getBricklet(bricklet));
     });
-    return res.status(200).send({bricklets: response});
+    return res.status(200).send({ bricklets: response });
 });
 
 //getBrickletByBrickletNumber
@@ -270,7 +270,7 @@ server.get("/bricklet/:brickletNumber", (req, res, next) => {
     if (bricklet == undefined) {
         return res.status(404).send();
     }
-    return res.status(200).send({uid: bricklet.uid});
+    return res.status(200).send({ uid: bricklet.uid });
 });
 
 //putBrickletByBrickletNumber
@@ -305,7 +305,7 @@ server.get("/motor", (req, res, next) => {
         });
         response.push(Motor.getMotor(motor, bricklets));
     });
-    return res.status(200).send({motors: response});
+    return res.status(200).send({ motors: response });
 });
 
 //getMotorByName
@@ -415,7 +415,7 @@ server.put("/motor/:motorName/settings", (req, res, next) => {
 //getAllPoses
 server.get("/pose", (req, res, next) => {
     const poses = mockData.poses.map((pose) => Pose.getPose(pose));
-    return res.status(200).send({poses});
+    return res.status(200).send({ poses });
 });
 
 //postPose
@@ -460,7 +460,7 @@ server.get("/pose/:poseId/motor-positions", (req, res, next) => {
     const motorPositions = pose.motorPositions.map((mp) =>
         MotorPosition.getMotorPosition(mp),
     );
-    return res.status(200).send({motorPositions});
+    return res.status(200).send({ motorPositions });
 });
 
 //getAllPrograms
@@ -469,7 +469,7 @@ server.get("/program", (req, res, next) => {
     mockData.programs.forEach((program) => {
         response.push(Program.getProgram(program));
     });
-    return res.status(200).send({programs: response});
+    return res.status(200).send({ programs: response });
 });
 
 //postProgram
@@ -550,7 +550,7 @@ server.get("/assistant-model", (req, res, next) => {
     mockData.assistantModel.forEach((model) => {
         response.push(AssistantModel.getAssistantModel(model));
     });
-    return res.status(200).send({assistantModels: response});
+    return res.status(200).send({ assistantModels: response });
 });
 
 //getAssistantModelById

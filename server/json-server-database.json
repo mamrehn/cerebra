@@ -55,71 +55,71 @@
       "personalityId": "2cb257e4-d173-44a6-869c-6488c98e8edb"
     }
   ],
-  "chatMessage" : [
+  "chatMessage": [
     {
-      "id" : 1,
-      "messageId" : "539ed3e6-9e3d-11ee-8c90-0242ac120002",
-      "timestamp" : "2024-02-06 09:46:32",
-      "isUser" : 1,
-      "content" : "hello pib!",
-      "chatId" : "ee3e80f9-c8f7-48c2-9f15-449ba9bbe4ab"
+      "id": 1,
+      "messageId": "539ed3e6-9e3d-11ee-8c90-0242ac120002",
+      "timestamp": "2024-02-06 09:46:32",
+      "isUser": 1,
+      "content": "hello pib!",
+      "chatId": "ee3e80f9-c8f7-48c2-9f15-449ba9bbe4ab"
     },
     {
-      "id" : 2,
-      "messageId" : "539ed3e6-9e3d-11ee-8c90-0242ac122222",
-      "timestamp" : "2024-02-06 09:50:32",
-      "isUser" : 0,
-      "content" : "hello user!",
-      "chatId" : "ee3e80f9-c8f7-48c2-9f15-449ba9bbe4ab"
+      "id": 2,
+      "messageId": "539ed3e6-9e3d-11ee-8c90-0242ac122222",
+      "timestamp": "2024-02-06 09:50:32",
+      "isUser": 0,
+      "content": "hello user!",
+      "chatId": "ee3e80f9-c8f7-48c2-9f15-449ba9bbe4ab"
     }
   ],
-  "cameraSettings" : [
+  "cameraSettings": [
     {
-      "id" : 1,
-      "resolution" : "SD",
-      "refeshRate" : 0.1,
-      "qualityFactor" : 80,
-      "resX" : 640,
-      "resY" : 480
+      "id": 1,
+      "resolution": "SD",
+      "refreshRate": 0.1,
+      "qualityFactor": 80,
+      "resX": 640,
+      "resY": 480
     }
   ],
   "programs": [
     {
-      "id" : 1,
-      "name" : "hello_world", 
-      "visual" : "{\"blocks\":{\"languageVersion\":0,\"blocks\":[{\"type\":\"text_print\",\"id\":\"m]IdB%+y#}e]Wkyv(z:O\",\"x\":491,\"y\":223,\"inputs\":{\"TEXT\":{\"shadow\":{\"type\":\"text\",\"id\":\"(moPdWrtEsMA$!r[|=S_\",\"fields\":{\"TEXT\":\"abc\"}},\"block\":{\"type\":\"text\",\"id\":\"JN{F[Dkw?Uw-1]=WJ%=P\",\"fields\":{\"TEXT\":\"Hello World\"}}}}}]}}",
+      "id": 1,
+      "name": "hello_world",
+      "visual": "{\"blocks\":{\"languageVersion\":0,\"blocks\":[{\"type\":\"text_print\",\"id\":\"m]IdB%+y#}e]Wkyv(z:O\",\"x\":491,\"y\":223,\"inputs\":{\"TEXT\":{\"shadow\":{\"type\":\"text\",\"id\":\"(moPdWrtEsMA$!r[|=S_\",\"fields\":{\"TEXT\":\"abc\"}},\"block\":{\"type\":\"text\",\"id\":\"JN{F[Dkw?Uw-1]=WJ%=P\",\"fields\":{\"TEXT\":\"Hello World\"}}}}}]}}",
       "programNumber": "e1d46e2a-935e-4e2b-b2f9-0856af4257c5"
     }
   ],
-  "bricklet" : [
+  "bricklet": [
     {
-      "id" : 1,
-      "uid" : "AAA",
-      "brickletNumber" : 1,
+      "id": 1,
+      "uid": "AAA",
+      "brickletNumber": 1,
       "type": "Servo Bricklet"
     },
     {
-      "id" : 2,
-      "uid" : "BBB",
-      "brickletNumber" : 2,
+      "id": 2,
+      "uid": "BBB",
+      "brickletNumber": 2,
       "type": "Servo Bricklet"
     },
     {
-      "id" : 3,
-      "uid" : "CCC",
-      "brickletNumber" : 3,
+      "id": 3,
+      "uid": "CCC",
+      "brickletNumber": 3,
       "type": "Servo Bricklet"
     },
     {
-      "id" : 4,
-      "uid" : "DDD",
-      "brickletNumber" : 4,
+      "id": 4,
+      "uid": "DDD",
+      "brickletNumber": 4,
       "type": "Solid State Relay Bricklet"
     }
   ],
   "motors": [
     {
-      "id" : 1,
+      "id": 1,
       "acceleration": 10000,
       "deceleration": 5000,
       "name": "tilt_forward_motor",
@@ -133,7 +133,7 @@
       "visible": true
     },
     {
-      "id" : 2,
+      "id": 2,
       "acceleration": 10000,
       "deceleration": 5000,
       "name": "tilt_sideways_motor",
@@ -147,7 +147,7 @@
       "visible": false
     },
     {
-      "id" : 3,
+      "id": 3,
       "acceleration": 10000,
       "deceleration": 5000,
       "name": "turn_head_motor",
@@ -161,7 +161,7 @@
       "visible": true
     },
     {
-      "id" : 4,
+      "id": 4,
       "acceleration": 10000,
       "deceleration": 5000,
       "name": "thumb_left_stretch",
@@ -175,7 +175,7 @@
       "visible": true
     },
     {
-      "id" : 5,
+      "id": 5,
       "acceleration": 10000,
       "deceleration": 5000,
       "name": "thumb_left_opposition",
@@ -189,7 +189,7 @@
       "visible": true
     },
     {
-      "id" : 6,
+      "id": 6,
       "acceleration": 10000,
       "deceleration": 5000,
       "name": "index_left_stretch",
@@ -203,7 +203,7 @@
       "visible": true
     },
     {
-      "id" : 7,
+      "id": 7,
       "acceleration": 10000,
       "deceleration": 5000,
       "name": "middle_left_stretch",
@@ -217,7 +217,7 @@
       "visible": true
     },
     {
-      "id" : 8,
+      "id": 8,
       "acceleration": 10000,
       "deceleration": 5000,
       "name": "ring_left_stretch",
@@ -231,7 +231,7 @@
       "visible": true
     },
     {
-      "id" : 9,
+      "id": 9,
       "acceleration": 10000,
       "deceleration": 5000,
       "name": "pinky_left_stretch",
@@ -245,7 +245,7 @@
       "visible": true
     },
     {
-      "id" : 10,
+      "id": 10,
       "acceleration": 10000,
       "deceleration": 5000,
       "name": "thumb_right_stretch",
@@ -259,7 +259,7 @@
       "visible": true
     },
     {
-      "id" : 11,
+      "id": 11,
       "acceleration": 10000,
       "deceleration": 5000,
       "name": "thumb_right_opposition",
@@ -273,7 +273,7 @@
       "visible": true
     },
     {
-      "id" : 12,
+      "id": 12,
       "acceleration": 10000,
       "deceleration": 5000,
       "name": "index_right_stretch",
@@ -287,7 +287,7 @@
       "visible": true
     },
     {
-      "id" : 13,
+      "id": 13,
       "acceleration": 10000,
       "deceleration": 5000,
       "name": "middle_right_stretch",
@@ -301,7 +301,7 @@
       "visible": true
     },
     {
-      "id" : 14,
+      "id": 14,
       "acceleration": 10000,
       "deceleration": 5000,
       "name": "ring_right_stretch",
@@ -315,7 +315,7 @@
       "visible": true
     },
     {
-      "id" : 15,
+      "id": 15,
       "acceleration": 10000,
       "deceleration": 5000,
       "name": "pinky_right_stretch",
@@ -329,7 +329,7 @@
       "visible": true
     },
     {
-      "id" : 16,
+      "id": 16,
       "acceleration": 10000,
       "deceleration": 5000,
       "name": "upper_arm_left_rotation",
@@ -343,7 +343,7 @@
       "visible": true
     },
     {
-      "id" : 17,
+      "id": 17,
       "acceleration": 10000,
       "deceleration": 5000,
       "name": "elbow_left",
@@ -357,7 +357,7 @@
       "visible": true
     },
     {
-      "id" : 18,
+      "id": 18,
       "acceleration": 10000,
       "deceleration": 5000,
       "name": "lower_arm_left_rotation",
@@ -371,7 +371,7 @@
       "visible": true
     },
     {
-      "id" : 19,
+      "id": 19,
       "acceleration": 10000,
       "deceleration": 5000,
       "name": "wrist_left",
@@ -385,7 +385,7 @@
       "visible": true
     },
     {
-      "id" : 20,
+      "id": 20,
       "acceleration": 10000,
       "deceleration": 5000,
       "name": "shoulder_vertical_left",
@@ -399,7 +399,7 @@
       "visible": true
     },
     {
-      "id" : 21,
+      "id": 21,
       "acceleration": 10000,
       "deceleration": 5000,
       "name": "shoulder_horizontal_left",
@@ -413,7 +413,7 @@
       "visible": true
     },
     {
-      "id" : 22,
+      "id": 22,
       "acceleration": 10000,
       "deceleration": 5000,
       "name": "upper_arm_right_rotation",
@@ -427,7 +427,7 @@
       "visible": true
     },
     {
-      "id" : 23,
+      "id": 23,
       "acceleration": 10000,
       "deceleration": 5000,
       "name": "elbow_right",
@@ -441,7 +441,7 @@
       "visible": true
     },
     {
-      "id" : 24,
+      "id": 24,
       "acceleration": 10000,
       "deceleration": 5000,
       "name": "lower_arm_right_rotation",
@@ -455,7 +455,7 @@
       "visible": true
     },
     {
-      "id" : 25,
+      "id": 25,
       "acceleration": 10000,
       "deceleration": 5000,
       "name": "wrist_right",
@@ -469,7 +469,7 @@
       "visible": true
     },
     {
-      "id" : 26,
+      "id": 26,
       "acceleration": 10000,
       "deceleration": 5000,
       "name": "shoulder_vertical_right",
@@ -483,7 +483,7 @@
       "visible": true
     },
     {
-      "id" : 27,
+      "id": 27,
       "acceleration": 10000,
       "deceleration": 5000,
       "name": "shoulder_horizontal_right",
@@ -497,209 +497,209 @@
       "visible": true
     }
   ],
-  "brickletPin" : [
+  "brickletPin": [
     {
-      "id" : 1,
-      "brickletId" : 1,
-      "motorId" : 3, 
-      "pin": 0, 
-      "invert" : 0
-    },
-    {
-      "id" : 2,
-      "brickletId" : 1,
-      "motorId" : 1, 
-      "pin": 1,
-      "invert": 0
-    },
-    {
-      "id" : 3,
-      "brickletId" : 2,
-      "motorId" : 2, 
-      "pin": 8,
-      "invert": 0
-    },
-    {
-      "id" : 4,
-      "brickletId" : 1,
-      "motorId" : 5,
-      "pin": 9,
-      "invert": 0
-    },
-    {
-      "id" : 5,
-      "brickletId" : 2,
-      "motorId" : 4,
+      "id": 1,
+      "brickletId": 1,
+      "motorId": 3,
       "pin": 0,
       "invert": 0
     },
     {
-      "id" : 6,
-      "brickletId" : 2,
-      "motorId" : 6,
+      "id": 2,
+      "brickletId": 1,
+      "motorId": 1,
       "pin": 1,
       "invert": 0
     },
     {
-      "id" : 7,
-      "brickletId" : 2,
-      "motorId" : 7,
-      "pin": 2,
-      "invert": 0
-    },
-    {
-      "id" : 8,
-      "brickletId" : 2,
-      "motorId" : 8,
-      "pin": 3,
-      "invert": 0
-    },
-    {
-      "id" : 9,
-      "brickletId" : 2,
-      "motorId" : 9,
-      "pin": 4,
-      "invert": 0
-    },
-    {
-      "id" : 10,
-      "brickletId" : 1,
-      "motorId" : 11,
-      "pin": 3,
-      "invert": 0
-    },
-    {
-      "id" : 11,
-      "brickletId" : 1,
-      "motorId" : 10,
-      "pin": 4,
-      "invert": 0
-    },
-    {
-      "id" : 12,
-      "brickletId" : 1,
-      "motorId" : 12,
-      "pin": 5,
-      "invert": 0
-    },
-    {
-      "id" : 13,
-      "brickletId" : 1,
-      "motorId" : 13,
-      "pin": 6,
-      "invert": 0
-    },
-    {
-      "id" : 14,
-      "brickletId" : 1,
-      "motorId" : 14,
-      "pin": 7,
-      "invert": 0
-    },
-    {
-      "id" : 15,
-      "brickletId" : 1,
-      "motorId" : 15,
+      "id": 3,
+      "brickletId": 2,
+      "motorId": 2,
       "pin": 8,
       "invert": 0
     },
     {
-      "id" : 16,
-      "brickletId" : 2,
-      "motorId" : 16,
-      "pin": 5,
-      "invert": 0
-    },
-    {
-      "id" : 17,
-      "brickletId" : 2,
-      "motorId" : 17,
-      "pin": 6,
-      "invert": 0
-    },
-    {
-      "id" : 18,
-      "brickletId" : 2,
-      "motorId" : 18,
-      "pin": 7,
-      "invert": 0
-    },
-    {
-      "id" : 19,
-      "brickletId" : 1,
-      "motorId" : 19,
-      "pin": 2,
-      "invert": 0
-    },
-    {
-      "id" : 20,
-      "brickletId" : 3,
-      "motorId" : 20,
-      "pin": 7,
-      "invert": 1
-    },
-    {
-      "id" : 21,
-      "brickletId" : 3,
-      "motorId" : 20,
+      "id": 4,
+      "brickletId": 1,
+      "motorId": 5,
       "pin": 9,
       "invert": 0
     },
     {
-      "id" : 22,
-      "brickletId" : 3,
-      "motorId" : 21,
+      "id": 5,
+      "brickletId": 2,
+      "motorId": 4,
       "pin": 0,
       "invert": 0
     },
     {
-      "id" : 23,
-      "brickletId" : 3,
-      "motorId" : 22,
+      "id": 6,
+      "brickletId": 2,
+      "motorId": 6,
       "pin": 1,
       "invert": 0
     },
     {
-      "id" : 24,
-      "brickletId" : 3,
-      "motorId" : 23,
+      "id": 7,
+      "brickletId": 2,
+      "motorId": 7,
       "pin": 2,
       "invert": 0
     },
     {
-      "id" : 25,
-      "brickletId" : 3,
-      "motorId" : 24,
+      "id": 8,
+      "brickletId": 2,
+      "motorId": 8,
       "pin": 3,
       "invert": 0
     },
     {
-      "id" : 26,
-      "brickletId" : 3,
-      "motorId" : 25,
+      "id": 9,
+      "brickletId": 2,
+      "motorId": 9,
       "pin": 4,
       "invert": 0
     },
     {
-      "id" : 27,
-      "brickletId" : 3,
-      "motorId" : 26,
-      "pin": 5,
-      "invert": 1
+      "id": 10,
+      "brickletId": 1,
+      "motorId": 11,
+      "pin": 3,
+      "invert": 0
     },
     {
-      "id" : 28,
-      "brickletId" : 3,
-      "motorId" : 26,
+      "id": 11,
+      "brickletId": 1,
+      "motorId": 10,
+      "pin": 4,
+      "invert": 0
+    },
+    {
+      "id": 12,
+      "brickletId": 1,
+      "motorId": 12,
+      "pin": 5,
+      "invert": 0
+    },
+    {
+      "id": 13,
+      "brickletId": 1,
+      "motorId": 13,
+      "pin": 6,
+      "invert": 0
+    },
+    {
+      "id": 14,
+      "brickletId": 1,
+      "motorId": 14,
+      "pin": 7,
+      "invert": 0
+    },
+    {
+      "id": 15,
+      "brickletId": 1,
+      "motorId": 15,
       "pin": 8,
       "invert": 0
     },
     {
-      "id" : 29,
-      "brickletId" : 3,
-      "motorId" : 27,
+      "id": 16,
+      "brickletId": 2,
+      "motorId": 16,
+      "pin": 5,
+      "invert": 0
+    },
+    {
+      "id": 17,
+      "brickletId": 2,
+      "motorId": 17,
       "pin": 6,
-      "invert" : 0
+      "invert": 0
+    },
+    {
+      "id": 18,
+      "brickletId": 2,
+      "motorId": 18,
+      "pin": 7,
+      "invert": 0
+    },
+    {
+      "id": 19,
+      "brickletId": 1,
+      "motorId": 19,
+      "pin": 2,
+      "invert": 0
+    },
+    {
+      "id": 20,
+      "brickletId": 3,
+      "motorId": 20,
+      "pin": 7,
+      "invert": 1
+    },
+    {
+      "id": 21,
+      "brickletId": 3,
+      "motorId": 20,
+      "pin": 9,
+      "invert": 0
+    },
+    {
+      "id": 22,
+      "brickletId": 3,
+      "motorId": 21,
+      "pin": 0,
+      "invert": 0
+    },
+    {
+      "id": 23,
+      "brickletId": 3,
+      "motorId": 22,
+      "pin": 1,
+      "invert": 0
+    },
+    {
+      "id": 24,
+      "brickletId": 3,
+      "motorId": 23,
+      "pin": 2,
+      "invert": 0
+    },
+    {
+      "id": 25,
+      "brickletId": 3,
+      "motorId": 24,
+      "pin": 3,
+      "invert": 0
+    },
+    {
+      "id": 26,
+      "brickletId": 3,
+      "motorId": 25,
+      "pin": 4,
+      "invert": 0
+    },
+    {
+      "id": 27,
+      "brickletId": 3,
+      "motorId": 26,
+      "pin": 5,
+      "invert": 1
+    },
+    {
+      "id": 28,
+      "brickletId": 3,
+      "motorId": 26,
+      "pin": 8,
+      "invert": 0
+    },
+    {
+      "id": 29,
+      "brickletId": 3,
+      "motorId": 27,
+      "pin": 6,
+      "invert": 0
     }
   ],
   "poses": []

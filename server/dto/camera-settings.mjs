@@ -1,7 +1,7 @@
 export class CameraSettings {
-    constructor(resolution, refeshRate, qualityFactor, resX, resY) {
+    constructor(resolution, refreshRate, qualityFactor, resX, resY) {
         this.resolution = resolution;
-        this.refeshRate = refeshRate;
+        this.refreshRate = refreshRate;
         this.qualityFactor = qualityFactor;
         this.resX = resX;
         this.resY = resY;
@@ -10,7 +10,7 @@ export class CameraSettings {
     static getCameraSettings(cammeraSettings) {
         return new CameraSettings(
             cammeraSettings.resolution,
-            cammeraSettings.refeshRate,
+            cammeraSettings.refreshRate,
             cammeraSettings.qualityFactor,
             cammeraSettings.resX,
             cammeraSettings.resY,
