@@ -1,10 +1,10 @@
 export enum rosTopics {
     jointTrajectoryTopicName = "/joint_trajectory",
     motorCurrentTopicName = "/motor_current",
-    cameraPreviewSizeTopicName = "/size_topic",
-    cameraTimerPeriodTopicName = "/timer_period_topic",
+    cameraPreviewSizeTopicName = "/camera/preview_size",
+    cameraTimerPeriodTopicName = "/camera/timer_period",
     cameraTopicName = "/camera_topic",
-    cameraQualityTopic = "/quality_factor_topic",
+    cameraQualityTopic = "/camera/quality_factor",
     chatMessages = "/chat_messages",
     voiceAssistantState = "/voice_assistant_state",
     chatIsListening = "/chat_is_listening",
@@ -17,18 +17,18 @@ export enum rosTopics {
     solidStateRelayState = "/solid_state_relay_state",
 
     // Camera CBOR (binary JPEG, faster than base64)
-    cameraImageCbor = "/camera/image",
-    cameraConfig = "/camera/config",
+    cameraImageCbor = "/camera/image/compressed",
+    cameraConfig = "/camera/video/config",
 
     // AI Vision (OAK-D Lite on-demand inference)
-    aiDetections = "/ai/detections",
-    aiConfig = "/ai/config",
-    aiAvailableModels = "/ai/available_models",
-    aiCurrentModel = "/ai/current_model",
+    aiDetections = "/camera/ai/detections",
+    aiConfig = "/camera/ai/config",
+    aiAvailableModels = "/camera/ai/available_models",
+    aiCurrentModel = "/camera/ai/current_model",
 
     // IMU (OAK-D Lite BMI270 6-axis)
-    imuData = "/imu/data",
-    imuAccelerometer = "/imu/accelerometer",
-    imuGyroscope = "/imu/gyroscope",
-    imuConfig = "/imu/config",
+    imuData = "/camera/imu",
+    imuAccelerometer = "/camera/imu/accelerometer",
+    imuGyroscope = "/camera/imu/gyroscope",
+    imuConfig = "/camera/imu/config",
 }
