@@ -1,17 +1,17 @@
 export enum rosDataTypes {
     // std msgs
-    empty = "std_msgs/Empty",
-    int32 = "std_msgs/Int32",
-    int32MultiArray = "std_msgs/Int32MultiArray",
-    float64 = "std_msgs/Float64",
-    string = "std_msgs/String",
+    empty = "std_msgs/msg/Empty",
+    int32 = "std_msgs/msg/Int32",
+    int32MultiArray = "std_msgs/msg/Int32MultiArray",
+    float64 = "std_msgs/msg/Float64",
+    string = "std_msgs/msg/String",
 
     // sensor msgs
-    compressedImage = "sensor_msgs/CompressedImage",
-    imu = "sensor_msgs/Imu",
+    compressedImage = "sensor_msgs/msg/CompressedImage",
+    imu = "sensor_msgs/msg/Imu",
 
     // geometry msgs
-    vector3Stamped = "geometry_msgs/Vector3Stamped",
+    vector3Stamped = "geometry_msgs/msg/Vector3Stamped",
 
     // msg
     motorSettings = "datatypes/msg/MotorSettings",
