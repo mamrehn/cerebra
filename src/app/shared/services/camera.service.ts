@@ -1,4 +1,4 @@
-import {CameraSettings} from "../types/camera-settings";
+import {CameraSettings, toCameraSettingsDto} from "../types/camera-settings";
 import {ApiService} from "./api.service";
 import {UrlConstants} from "../../shared/services/url.constants";
 import {BehaviorSubject, Subject, catchError, throwError} from "rxjs";
@@ -51,7 +51,7 @@ export class CameraService {
 
     updateCameraSettings(updateCameraSettings: CameraSettings) {
         this.apiService
-            .put(UrlConstants.CAMERA, updateCameraSettings)
+            .put(UrlConstants.CAMERA, toCameraSettingsDto(updateCameraSettings))
             .pipe(
                 catchError((err) => {
                     return throwError(() => {

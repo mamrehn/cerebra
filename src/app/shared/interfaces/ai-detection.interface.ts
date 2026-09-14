@@ -6,8 +6,12 @@
 export type JpegBytes = Uint8Array<ArrayBuffer>;
 
 /**
- * AI Detection interfaces for OAK-D Lite vision processing
- * Based on ROS_TOPICS.md and PLAN_AI_IMAGE_WEBSOCKET.md
+ * AI vision interfaces for the OAK-D Lite camera node.
+ *
+ * These mirror the payloads published by `ros_packages/camera/oak_d_lite/stereo.py`
+ * in pib-backend (branch `ai_cam_topics`). The node dispatches on the *runtime*
+ * DepthAI output object, not on the model's declared type, so the result shape
+ * is discriminated here by its own keys rather than by `AiDetectionMessage.type`.
  */
 
 /** Bounding box in normalized coordinates (0-1) */
@@ -18,129 +22,199 @@ export interface BoundingBox {
     ymax: number;
 }
 
-/** Single detection result */
-export interface Detection {
-    label: number;
-    confidence: number;
-    bbox: BoundingBox;
-}
-
-/** Classification result */
-export interface Classification {
-    class_id: number;
-    confidence: number;
-}
-
-/** Keypoint for pose estimation */
+/** A single keypoint. The backend emits no id; position in the array is the index. */
 export interface Keypoint {
-    id: number;
     x: number;
     y: number;
     confidence: number;
 }
 
-/** Segmentation bounding box with class info */
-export interface SegmentationBBox {
-    class_id: number;
-    bbox: BoundingBox;
-    pixel_count: number;
-    coverage: number;
-}
-
-/** RLE-encoded segmentation mask */
+/**
+ * RLE-encoded segmentation mask, as produced by `rle_encode()` in stereo.py.
+ * `runs[i]` repetitions of `values[i]`, row-major over `shape`.
+ */
 export interface SegmentationMaskRLE {
-    size: [number, number];
-    counts: number[];
+    runs: number[];
+    values: number[];
+    shape: number[];
 }
 
-/** Detection result payload */
+/**
+ * One detection. Models emitting `ImgDetectionsExtended` (pose_yolo,
+ * segmentation) add keypoints and/or a mask to the same structure.
+ */
+export interface Detection {
+    label: number;
+    confidence: number;
+    bbox: BoundingBox;
+    keypoints?: Keypoint[];
+    /** Present only when the model produced a mask. */
+    has_mask?: boolean;
+    /** Present only in `segmentation_mode: "mask"`. */
+    mask_rle?: SegmentationMaskRLE;
+}
+
+/** A line segment from the M-LSD model. */
+export interface Line {
+    start: {x: number; y: number};
+    end: {x: number; y: number};
+    confidence: number;
+}
+
+/** A single classification-style prediction (gaze and similar models). */
+export interface Prediction {
+    class: number;
+    confidence: number;
+}
+
+/** `_format_detections` / `_format_detections_extended` */
 export interface DetectionResult {
     detections: Detection[];
     count: number;
 }
 
-/** Classification result payload */
-export interface ClassificationResult {
-    classifications: Classification[];
-}
-
-/** Segmentation result in bbox mode */
-export interface SegmentationBBoxResult {
-    mode: "bbox";
-    image_size: [number, number];
-    classes_detected: number[];
-    num_classes: number;
-    bboxes: SegmentationBBox[];
+/** `_format_keypoints` — bare keypoint list (pose_hrnet, hand) */
+export interface KeypointsResult {
+    keypoints: Keypoint[];
     count: number;
 }
 
-/** Segmentation result in mask mode (RLE encoded) */
-export interface SegmentationMaskResult {
-    mode: "mask";
-    image_size: [number, number];
-    target_class: number;
-    target_bbox: BoundingBox;
-    mask_rle: SegmentationMaskRLE;
-    pixel_count: number;
+/** `_format_lines` */
+export interface LinesResult {
+    lines: Line[];
+    count: number;
 }
 
-/** Pose estimation result */
-export interface PoseResult {
-    keypoints: Keypoint[];
-    num_keypoints: number;
-    detected_count: number;
+/** `_format_predictions` */
+export interface PredictionsResult {
+    predictions: Prediction[];
+    count: number;
 }
 
-/** AI detection message types */
+/** Raw passthrough when depthai-nodes is unavailable for a parsed model. */
+export interface RawResult {
+    raw?: string;
+    raw_layers?: string[];
+    note?: string;
+    type?: string;
+}
+
+/** Any formatter can fail and return this instead. */
+export interface ErrorResult {
+    error: string;
+}
+
+/** Every result payload the camera node can emit. */
+export type AiResult =
+    | DetectionResult
+    | KeypointsResult
+    | LinesResult
+    | PredictionsResult
+    | RawResult
+    | ErrorResult;
+
+/**
+ * Model families declared in AVAILABLE_MODELS. Note that the payload shape does
+ * not follow from this value, so prefer the guards below over switching on it.
+ */
 export type AiResultType =
     | "detection"
-    | "classification"
-    | "segmentation"
-    | "pose";
+    | "pose"
+    | "hand"
+    | "instance-segmentation"
+    | "gaze"
+    | "lines";
 
-/** Base AI detection message */
+/** A frame of inference output, from `camera/ai/detections`. */
 export interface AiDetectionMessage {
     model: string;
-    type: AiResultType;
+    type: AiResultType | string;
     frame_id: number;
     timestamp_ns: number;
     latency_ms: number;
-    result:
-        | DetectionResult
-        | ClassificationResult
-        | SegmentationBBoxResult
-        | SegmentationMaskResult
-        | PoseResult;
+    result: AiResult;
 }
 
-/** AI configuration for publishing to /ai/config */
+export function isErrorResult(result: AiResult): result is ErrorResult {
+    return typeof (result as ErrorResult)?.error === "string";
+}
+
+export function isDetectionResult(result: AiResult): result is DetectionResult {
+    return Array.isArray((result as DetectionResult)?.detections);
+}
+
+export function isKeypointsResult(result: AiResult): result is KeypointsResult {
+    return Array.isArray((result as KeypointsResult)?.keypoints);
+}
+
+export function isLinesResult(result: AiResult): result is LinesResult {
+    return Array.isArray((result as LinesResult)?.lines);
+}
+
+export function isPredictionsResult(
+    result: AiResult,
+): result is PredictionsResult {
+    return Array.isArray((result as PredictionsResult)?.predictions);
+}
+
+/** AI configuration published to `camera/ai/config`. */
 export interface AiConfig {
     model?: string;
     confidence?: number;
     segmentation_mode?: "bbox" | "mask";
-    segmentation_target_class?: number;
+    segmentation_target_class?: number | null;
 }
 
-/** AI model metadata from /ai/available_models */
-export interface AiModelInfo {
+/**
+ * Per-model metadata as it appears on the wire, keyed by model name in the
+ * `camera/ai/available_models` payload.
+ */
+export interface AiModelInfoPayload {
+    type: AiResultType | string;
+    description: string;
+    classes: number;
+    slug: string;
+}
+
+/**
+ * `camera/ai/available_models` is a plain object keyed by model name, e.g.
+ * `{"yolov6n": {type, description, classes, slug}, ...}` — not a wrapper.
+ */
+export type AiAvailableModelsMessage = Record<string, AiModelInfoPayload>;
+
+/** A model flattened for display, with its registry key folded in as `name`. */
+export interface AiModelInfo extends AiModelInfoPayload {
     name: string;
-    type: AiResultType;
-    description?: string;
-    num_classes?: number;
-    input_size?: [number, number];
 }
 
-/** Available models response from /ai/available_models */
-export interface AiAvailableModelsMessage {
-    models: AiModelInfo[];
+/**
+ * Flatten the keyed available-models payload into a list.
+ *
+ * The backend's registry order is deliberate (default model first, grouped by
+ * family) and survives both json.dumps and JSON.parse for non-numeric keys, so
+ * it is kept rather than re-sorted.
+ */
+export function toModelList(
+    message: AiAvailableModelsMessage | null | undefined,
+): AiModelInfo[] {
+    if (!message || typeof message !== "object") return [];
+    return Object.entries(message)
+        .filter(([, info]) => info && typeof info === "object")
+        .map(([name, info]) => ({name, ...info}));
 }
 
-/** Current model info from /ai/current_model */
+/** `camera/ai/current_model`, published on the status timer. */
 export interface AiCurrentModelMessage {
-    model: string;
-    type: AiResultType;
+    name: string;
+    type: AiResultType | string;
+    description: string;
+    classes: number;
+    slug: string;
+    /** Whether the AI branch of the pipeline is currently built. */
     active: boolean;
-    confidence: number;
+    loading: boolean;
+    /** Non-null when the last model load failed. */
+    error: string | null;
 }
 
 /** COCO class labels (80 classes) for common object detection models */

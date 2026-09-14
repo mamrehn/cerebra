@@ -129,4 +129,147 @@ describe("CameraComponent", () => {
         expect(spyUnsubscribeCamera).toHaveBeenCalled();
         expect(spyUnsubscribeCameraCbor).toHaveBeenCalled();
     });
+
+    /** Two registry entries, in the order the camera node publishes them. */
+    const MODELS = {
+        yolov6n: {
+            type: "detection",
+            description: "YOLOv6 Nano",
+            classes: 80,
+            slug: "luxonis/yolov6-nano:r2-coco-512x288",
+        },
+        face: {
+            type: "detection",
+            description: "YuNet face detection",
+            classes: 1,
+            slug: "luxonis/yunet:640x480",
+        },
+    };
+
+    const modelMenuEntries = () =>
+        fixture.debugElement.queryAll(
+            By.css('[aria-labelledby="aiModelDropdown"] button'),
+        );
+
+    it("lists the available models in the menu, in the backend's order", () => {
+        component.aiEnabled = true;
+        rosService.aiAvailableModelsReceiver$.next(MODELS);
+        fixture.detectChanges();
+
+        const texts = modelMenuEntries().map((el) =>
+            el.nativeElement.textContent.replace(/\s+/g, " ").trim(),
+        );
+        expect(texts).toEqual(["yolov6n (detection)", "face (detection)"]);
+    });
+
+    it("shows a disabled placeholder until the camera node reports its models", () => {
+        component.aiEnabled = true;
+        fixture.detectChanges();
+
+        const entries = modelMenuEntries();
+        expect(entries.length).toBe(1);
+        expect(entries[0].nativeElement.disabled).toBeTrue();
+        expect(entries[0].nativeElement.textContent).toContain(
+            "Waiting for the camera node",
+        );
+    });
+
+    it("labels the model button from the current_model `name` field", () => {
+        component.aiEnabled = true;
+        rosService.aiCurrentModelReceiver$.next({
+            name: "yolov6n",
+            type: "detection",
+            description: "YOLOv6 Nano",
+            classes: 80,
+            slug: "luxonis/yolov6-nano:r2-coco-512x288",
+            active: true,
+            loading: false,
+            error: null,
+        });
+        fixture.detectChanges();
+
+        const label = fixture.debugElement.query(
+            By.css("#aiModelDropdown span"),
+        );
+        expect(label.nativeElement.textContent.trim()).toBe("yolov6n");
+    });
+
+    it("names boxes from single-class models after the model, not the COCO table", () => {
+        rosService.aiAvailableModelsReceiver$.next(MODELS);
+        const fillText = spyOn(CanvasRenderingContext2D.prototype, "fillText");
+        const frame = (model: string) => ({
+            model,
+            type: "detection",
+            frame_id: 1,
+            timestamp_ns: 0,
+            latency_ms: 10,
+            result: {
+                detections: [
+                    {
+                        label: 0,
+                        confidence: 0.87,
+                        bbox: {xmin: 0.1, ymin: 0.2, xmax: 0.4, ymax: 0.8},
+                    },
+                ],
+                count: 1,
+            },
+        });
+
+        component["drawAiOverlay"](frame("face"));
+        component["drawAiOverlay"](frame("yolov6n"));
+
+        expect(fillText.calls.allArgs().map((args) => args[0])).toEqual([
+            "face 87%",
+            "person 87%",
+        ]);
+    });
+
+    it("counts keypoint and prediction results, not only bounding boxes", () => {
+        component.latestDetection = {
+            model: "pose_hrnet",
+            type: "pose",
+            frame_id: 1,
+            timestamp_ns: 0,
+            latency_ms: 10,
+            result: {
+                keypoints: [
+                    {x: 0.1, y: 0.1, confidence: 0.9},
+                    {x: 0.2, y: 0.2, confidence: 0.8},
+                ],
+                count: 2,
+            },
+        };
+        expect(component.getDetectionCount()).toBe(2);
+
+        component.latestDetection = {
+            model: "gaze",
+            type: "gaze",
+            frame_id: 2,
+            timestamp_ns: 0,
+            latency_ms: 10,
+            result: {predictions: [{class: 0, confidence: 0.6}], count: 1},
+        };
+        expect(component.getDetectionCount()).toBe(1);
+        expect(component.getDetectionError()).toBeNull();
+    });
+
+    it("surfaces a formatter error instead of counting it as a detection", () => {
+        component.latestDetection = {
+            model: "hand",
+            type: "hand",
+            frame_id: 1,
+            timestamp_ns: 0,
+            latency_ms: 10,
+            result: {error: "depthai-nodes not installed"},
+        };
+
+        expect(component.getDetectionCount()).toBe(0);
+        expect(component.getDetectionError()).toBe(
+            "depthai-nodes not installed",
+        );
+    });
+
+    it("offers exactly the report rates DepthAI exposes for the BMI270", () => {
+        expect(component.imuFrequencies).toEqual([25, 50, 100, 200, 250]);
+    });
 });

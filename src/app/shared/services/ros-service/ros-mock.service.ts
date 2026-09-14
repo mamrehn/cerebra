@@ -34,6 +34,7 @@ import {
     ImuData,
     Vector3Stamped,
 } from "../../interfaces/imu-data.interface";
+import {CameraVideoConfig} from "../../types/camera-settings";
 import {GoalStatus, isTerminal} from "../../ros-types/action/goal-status";
 import {IRosService} from "./i-ros-service";
 import {ApiService} from "../api.service";
@@ -486,34 +487,51 @@ export class RosService implements IRosService {
         this.cameraCborTimer = undefined;
     }
 
-    publishCameraConfig(config: {
-        fps?: number;
-        quality?: number;
-        resolution?: [number, number];
-    }): void {
+    publishCameraConfig(config: CameraVideoConfig): void {
         console.info(JSON.stringify(config));
     }
 
     // ==================== AI Detection ====================
 
-    subscribeAiDetectionsTopic(): void {
-        this.aiAvailableModelsReceiver$.next({
-            models: [
-                {
-                    name: "mobilenet-ssd",
-                    type: "detection",
-                    description: "Mock detector",
-                    num_classes: 80,
-                    input_size: [300, 300],
-                },
-            ],
-        });
-        this.aiCurrentModelReceiver$.next({
-            model: "mobilenet-ssd",
+    /** A slice of the real AVAILABLE_MODELS registry, same wire shape. */
+    private static readonly MOCK_MODELS: AiAvailableModelsMessage = {
+        yolov6n: {
             type: "detection",
+            description: "YOLOv6 Nano - fast & accurate object detection",
+            classes: 80,
+            slug: "luxonis/yolov6-nano:r2-coco-512x288",
+        },
+        pose_hrnet: {
+            type: "pose",
+            description: "Lite-HRNet - high resolution pose estimation",
+            classes: 0,
+            slug: "luxonis/lite-hrnet:18-coco-288x384",
+        },
+    };
+
+    private static readonly MOCK_MODEL_NAME = "yolov6n";
+
+    private static mockCurrentModel(name: string): AiCurrentModelMessage {
+        const info = RosService.MOCK_MODELS[name];
+        return {
+            name,
+            type: info?.type ?? "unknown",
+            description: info?.description ?? "",
+            classes: info?.classes ?? 0,
+            slug: info?.slug ?? "",
             active: true,
-            confidence: 0.5,
-        });
+            loading: false,
+            error: null,
+        };
+    }
+
+    subscribeAiDetectionsTopic(): void {
+        // Shapes mirror the camera node exactly: available_models is an object
+        // keyed by model name, and current_model reports `name`, not `model`.
+        this.aiAvailableModelsReceiver$.next(RosService.MOCK_MODELS);
+        this.aiCurrentModelReceiver$.next(
+            RosService.mockCurrentModel(RosService.MOCK_MODEL_NAME),
+        );
         if (this.aiDetectionTimer) return;
         let frame = 0;
         this.aiDetectionTimer = setInterval(() => {
@@ -521,7 +539,7 @@ export class RosService implements IRosService {
             // A single box drifting across the frame, so the overlay is visible.
             const offset = (frame % 20) / 40;
             this.aiDetectionsReceiver$.next({
-                model: "mobilenet-ssd",
+                model: RosService.MOCK_MODEL_NAME,
                 type: "detection",
                 frame_id: frame,
                 timestamp_ns: Date.now() * 1_000_000,
@@ -553,12 +571,9 @@ export class RosService implements IRosService {
     publishAiConfig(config: AiConfig): void {
         console.info(JSON.stringify(config));
         if (config.model) {
-            this.aiCurrentModelReceiver$.next({
-                model: config.model,
-                type: "detection",
-                active: true,
-                confidence: config.confidence ?? 0.5,
-            });
+            this.aiCurrentModelReceiver$.next(
+                RosService.mockCurrentModel(config.model),
+            );
         }
     }
 

@@ -50,12 +50,21 @@ export interface Vector3Stamped {
     vector: Vector3;
 }
 
-/** Sampling rates the BMI270 accepts, in Hz */
+/**
+ * Report rates DepthAI exposes for the BMI270, in Hz (docs.luxonis.com, BMI270:
+ * "DepthAI-exposed runtime behavior"). Requests round down, and anything above
+ * 400 Hz tops out around 250 Hz.
+ *
+ * The camera node's BMI270_VALID_FREQUENCIES lists 400 where it should list 250
+ * and snaps each request to its nearest entry, so until that is corrected a
+ * 250 Hz request is delivered at 200 Hz.
+ */
 export type ImuFrequency = 25 | 50 | 100 | 200 | 250;
 
 /**
- * IMU configuration for publishing to the IMU config topic
- * Note: BMI270 rounds down to nearest available frequency
+ * IMU configuration for publishing to the IMU config topic.
+ * Note: the backend snaps the request to the nearest supported frequency and
+ * logs a warning, so an unsupported value fails silently from the UI's side.
  */
 export interface ImuConfig {
     frequency: ImuFrequency;

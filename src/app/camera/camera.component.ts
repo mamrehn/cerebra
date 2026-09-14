@@ -25,13 +25,21 @@ import {
     AiModelInfo,
     AiCurrentModelMessage,
     Detection,
-    DetectionResult,
     JpegBytes,
+    Keypoint,
+    Line,
     getLabelName,
+    isDetectionResult,
+    isErrorResult,
+    isKeypointsResult,
+    isLinesResult,
+    isPredictionsResult,
+    toModelList,
 } from "../shared/interfaces/ai-detection.interface";
 import {
     ImuData,
     ImuFrequency,
+    VALID_IMU_FREQUENCIES,
     quaternionToEuler,
     radToDeg,
 } from "../shared/interfaces/imu-data.interface";
@@ -54,6 +62,9 @@ import {
     ],
 })
 export class CameraComponent implements OnInit, OnDestroy, AfterViewInit {
+    /** Keypoints below this confidence are too noisy to be worth drawing. */
+    private static readonly KEYPOINT_MIN_CONFIDENCE = 0.3;
+
     @ViewChild("videobox") videoBox?: ElementRef;
     @ViewChild("refreshRate") refreshRateSlider!: ElementRef;
     @ViewChild("qualityFactor") qualityFactorSlider!: ElementRef;
@@ -92,7 +103,7 @@ export class CameraComponent implements OnInit, OnDestroy, AfterViewInit {
     imuEnabled = false;
     imuData: ImuData | null = null;
     imuFrequency: ImuFrequency = 100;
-    readonly imuFrequencies: ImuFrequency[] = [25, 50, 100, 200, 250];
+    readonly imuFrequencies: ImuFrequency[] = [...VALID_IMU_FREQUENCIES];
     orientation = {roll: 0, pitch: 0, yaw: 0};
 
     cameraSettings: CameraSettings | undefined;
@@ -132,9 +143,9 @@ export class CameraComponent implements OnInit, OnDestroy, AfterViewInit {
         this.cameraService.aiAvailableModelsReceiver$
             .pipe(takeUntil(this.destroy$))
             .subscribe((models) => {
-                if (models) {
-                    this.availableModels = models.models;
-                }
+                // The topic carries an object keyed by model name, so it has to
+                // be flattened into a list before the dropdown can render it.
+                this.availableModels = toModelList(models);
             });
 
         // Subscribe to current AI model
@@ -357,12 +368,82 @@ export class CameraComponent implements OnInit, OnDestroy, AfterViewInit {
         const canvas = this.aiOverlayCanvas.nativeElement;
         this.aiCtx.clearRect(0, 0, canvas.width, canvas.height);
 
-        if (detection.type === "detection" && detection.result) {
-            const result = detection.result as DetectionResult;
+        const result = detection.result;
+        if (!result || isErrorResult(result)) return;
+
+        // The camera node picks a formatter from the runtime DepthAI output
+        // type, so several model families share the detection shape and the
+        // others are distinguished by their own keys.
+        if (isDetectionResult(result)) {
             for (const det of result.detections) {
-                this.drawBoundingBox(det, canvas.width, canvas.height);
+                this.drawBoundingBox(
+                    det,
+                    canvas.width,
+                    canvas.height,
+                    detection.model,
+                );
+                if (det.keypoints?.length) {
+                    this.drawKeypoints(
+                        det.keypoints,
+                        canvas.width,
+                        canvas.height,
+                    );
+                }
+            }
+        } else if (isKeypointsResult(result)) {
+            this.drawKeypoints(result.keypoints, canvas.width, canvas.height);
+        } else if (isLinesResult(result)) {
+            for (const line of result.lines) {
+                this.drawLine(line, canvas.width, canvas.height);
             }
         }
+    }
+
+    /**
+     * Draw keypoints as filled dots. Coordinates are normalized (0-1).
+     */
+    private drawKeypoints(
+        keypoints: Keypoint[],
+        canvasWidth: number,
+        canvasHeight: number,
+    ): void {
+        if (!this.aiCtx) return;
+
+        for (const kp of keypoints) {
+            if (kp.confidence < CameraComponent.KEYPOINT_MIN_CONFIDENCE)
+                continue;
+            this.aiCtx.beginPath();
+            this.aiCtx.arc(
+                kp.x * canvasWidth,
+                kp.y * canvasHeight,
+                3,
+                0,
+                Math.PI * 2,
+            );
+            this.aiCtx.fillStyle = "#4ECDC4";
+            this.aiCtx.fill();
+        }
+    }
+
+    /**
+     * Draw a detected line segment. Coordinates are normalized (0-1).
+     */
+    private drawLine(
+        line: Line,
+        canvasWidth: number,
+        canvasHeight: number,
+    ): void {
+        if (!this.aiCtx) return;
+
+        this.aiCtx.beginPath();
+        this.aiCtx.moveTo(
+            line.start.x * canvasWidth,
+            line.start.y * canvasHeight,
+        );
+        this.aiCtx.lineTo(line.end.x * canvasWidth, line.end.y * canvasHeight);
+        this.aiCtx.strokeStyle = "#FFD700";
+        this.aiCtx.lineWidth = 2;
+        this.aiCtx.stroke();
     }
 
     /**
@@ -372,6 +453,7 @@ export class CameraComponent implements OnInit, OnDestroy, AfterViewInit {
         detection: Detection,
         canvasWidth: number,
         canvasHeight: number,
+        modelName: string,
     ): void {
         if (!this.aiCtx) return;
 
@@ -392,9 +474,9 @@ export class CameraComponent implements OnInit, OnDestroy, AfterViewInit {
         this.aiCtx.strokeRect(x, y, width, height);
 
         // Draw label background
-        const labelText = `${getLabelName(label)} ${(confidence * 100).toFixed(
-            0,
-        )}%`;
+        const labelText = `${this.boxLabel(modelName, label)} ${(
+            confidence * 100
+        ).toFixed(0)}%`;
         this.aiCtx.font = "14px Arial";
         const textMetrics = this.aiCtx.measureText(labelText);
         const textHeight = 18;
@@ -411,6 +493,16 @@ export class CameraComponent implements OnInit, OnDestroy, AfterViewInit {
         // Draw label text
         this.aiCtx.fillStyle = "#ffffff";
         this.aiCtx.fillText(labelText, x + padding, y - padding - 2);
+    }
+
+    /**
+     * Label text for a box. Single-class models (face, person) always report
+     * label 0, which the COCO table would name "person", so they are named
+     * after the model instead.
+     */
+    private boxLabel(modelName: string, label: number): string {
+        const model = this.availableModels.find((m) => m.name === modelName);
+        return model?.classes === 1 ? model.name : getLabelName(label);
     }
 
     /**
@@ -445,14 +537,19 @@ export class CameraComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     getDetectionCount(): number {
-        if (
-            !this.latestDetection ||
-            this.latestDetection.type !== "detection"
-        ) {
-            return 0;
-        }
-        const result = this.latestDetection.result as DetectionResult;
-        return result.count || result.detections?.length || 0;
+        const result = this.latestDetection?.result;
+        if (!result || isErrorResult(result)) return 0;
+        if (isDetectionResult(result)) return result.detections.length;
+        if (isKeypointsResult(result)) return result.keypoints.length;
+        if (isLinesResult(result)) return result.lines.length;
+        if (isPredictionsResult(result)) return result.predictions.length;
+        return 0;
+    }
+
+    /** The error text from the last inference frame, if it failed. */
+    getDetectionError(): string | null {
+        const result = this.latestDetection?.result;
+        return result && isErrorResult(result) ? result.error : null;
     }
 
     // ==================== IMU Methods ====================

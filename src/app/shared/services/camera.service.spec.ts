@@ -87,6 +87,34 @@ describe("CameraService", () => {
         expect(res).toBe("TestString");
     });
 
+    it("omits client-only fields from the settings PUT", () => {
+        // The backend's camera-settings schema rejects unknown fields, so an
+        // `isActive` flag in the body makes the whole PUT fail with 400.
+        const withViewState = new CameraSettings(
+            "HD",
+            0.5,
+            50,
+            1280,
+            720,
+            true,
+        );
+        const spyOnPut = spyOn(apiService, "put").and.returnValue(
+            behaviorSubjectOfUpdatedCameraSettings,
+        );
+
+        service.updateCameraSettings(withViewState);
+
+        const body = spyOnPut.calls.mostRecent().args[1];
+        expect(Object.keys(body).sort()).toEqual([
+            "qualityFactor",
+            "refreshRate",
+            "resX",
+            "resY",
+            "resolution",
+        ]);
+        expect("isActive" in body).toBeFalse();
+    });
+
     it("should return camera CBOR binary data over ros topic", () => {
         let res: JpegBytes | undefined;
         service.cameraCborReceiver$.subscribe((response: JpegBytes) => {

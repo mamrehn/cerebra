@@ -26,6 +26,7 @@ import {
     ImuData,
     Vector3Stamped,
 } from "../../interfaces/imu-data.interface";
+import {CameraVideoConfig} from "../../types/camera-settings";
 
 export interface IRosService {
     currentReceiver$: Subject<DiagnosticStatus>;
@@ -85,11 +86,7 @@ export interface IRosService {
 
     unsubscribeCameraCborTopic: () => void;
 
-    publishCameraConfig: (config: {
-        fps?: number;
-        quality?: number;
-        resolution?: [number, number];
-    }) => void;
+    publishCameraConfig: (config: CameraVideoConfig) => void;
 
     subscribeAiDetectionsTopic: () => void;
 

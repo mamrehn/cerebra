@@ -26,6 +26,7 @@ import {
     Vector3Stamped,
     ImuConfig,
 } from "../../interfaces/imu-data.interface";
+import {CameraVideoConfig} from "../../types/camera-settings";
 import {rosServices} from "../../ros-types/path/ros-services.enum";
 import {
     SetVoiceAssistantStateRequest,
@@ -922,11 +923,7 @@ export class RosService implements IRosService {
     /**
      * Publish camera configuration
      */
-    publishCameraConfig(config: {
-        fps?: number;
-        quality?: number;
-        resolution?: [number, number];
-    }) {
+    publishCameraConfig(config: CameraVideoConfig) {
         if (!this.cameraConfigTopic) {
             console.error("ROS is not connected.");
             return;
