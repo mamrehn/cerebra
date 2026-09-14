@@ -14,11 +14,30 @@ import {ProxyRunProgramStatus} from "../../ros-types/msg/proxy-run-program-statu
 import {ChatMessage} from "../../ros-types/msg/chat-message";
 import {ChatIsListening} from "../../ros-types/msg/chat-is-listening";
 import {SolidStateRelayState} from "../../ros-types/msg/solid-state-relay-state";
+import {
+    AiAvailableModelsMessage,
+    AiConfig,
+    AiCurrentModelMessage,
+    AiDetectionMessage,
+    JpegBytes,
+} from "../../interfaces/ai-detection.interface";
+import {
+    ImuConfig,
+    ImuData,
+    Vector3Stamped,
+} from "../../interfaces/imu-data.interface";
 
 export interface IRosService {
     currentReceiver$: Subject<DiagnosticStatus>;
     cameraTimerPeriodReceiver$: BehaviorSubject<number>;
     cameraReceiver$: Subject<string>;
+    cameraCborReceiver$: Subject<JpegBytes>;
+    aiDetectionsReceiver$: Subject<AiDetectionMessage>;
+    aiAvailableModelsReceiver$: BehaviorSubject<AiAvailableModelsMessage | null>;
+    aiCurrentModelReceiver$: BehaviorSubject<AiCurrentModelMessage | null>;
+    imuDataReceiver$: Subject<ImuData>;
+    imuAccelerometerReceiver$: Subject<Vector3Stamped>;
+    imuGyroscopeReceiver$: Subject<Vector3Stamped>;
     cameraPreviewSizeReceiver$: BehaviorSubject<number[]>;
     cameraQualityFactorReceiver$: BehaviorSubject<number>;
     jointTrajectoryReceiver$: Subject<JointTrajectoryMessage>;
@@ -32,6 +51,7 @@ export interface IRosService {
     solidStateRelayStateReceiver$: BehaviorSubject<
         SolidStateRelayState | undefined
     >;
+    connectionStatus$: Observable<boolean>;
 
     setVoiceAssistantState: (
         voiceAssistantState: VoiceAssistantState,
@@ -60,6 +80,36 @@ export interface IRosService {
     subscribeCameraTopic: () => void;
 
     unsubscribeCameraTopic: () => void;
+
+    subscribeCameraCborTopic: () => void;
+
+    unsubscribeCameraCborTopic: () => void;
+
+    publishCameraConfig: (config: {
+        fps?: number;
+        quality?: number;
+        resolution?: [number, number];
+    }) => void;
+
+    subscribeAiDetectionsTopic: () => void;
+
+    unsubscribeAiDetectionsTopic: () => void;
+
+    publishAiConfig: (config: AiConfig) => void;
+
+    subscribeImuDataTopic: () => void;
+
+    unsubscribeImuDataTopic: () => void;
+
+    subscribeImuAccelerometerTopic: () => void;
+
+    unsubscribeImuAccelerometerTopic: () => void;
+
+    subscribeImuGyroscopeTopic: () => void;
+
+    unsubscribeImuGyroscopeTopic: () => void;
+
+    publishImuConfig: (config: ImuConfig) => void;
 
     publishProgramInput: (input: string, mpid: number) => void;
 

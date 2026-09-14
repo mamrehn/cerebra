@@ -161,16 +161,28 @@ video {
         text-transform: uppercase;
         margin-bottom: 0.25rem;
 
-        &.x { color: #FF6B6B; }
-        &.y { color: #4ECDC4; }
-        &.z { color: #45B7D1; }
-        &.roll { color: #FF6B6B; }
-        &.pitch { color: #4ECDC4; }
-        &.yaw { color: #45B7D1; }
+        &.x {
+            color: #ff6b6b;
+        }
+        &.y {
+            color: #4ecdc4;
+        }
+        &.z {
+            color: #45b7d1;
+        }
+        &.roll {
+            color: #ff6b6b;
+        }
+        &.pitch {
+            color: #4ecdc4;
+        }
+        &.yaw {
+            color: #45b7d1;
+        }
     }
 
     .value {
-        font-family: 'Courier New', monospace;
+        font-family: "Courier New", monospace;
         font-size: 0.9rem;
         color: $white-color;
     }

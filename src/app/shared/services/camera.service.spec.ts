@@ -1,4 +1,5 @@
 import {TestBed} from "@angular/core/testing";
+import {JpegBytes} from "../interfaces/ai-detection.interface";
 
 import {HttpClientTestingModule} from "@angular/common/http/testing";
 import {ApiService} from "./api.service";
@@ -76,12 +77,22 @@ describe("CameraService", () => {
         expect(service.cameraSettings.getValue().refreshRate).toBe(0.5);
     });
 
-    it("should return camera CBOR binary data over ros topic", () => {
-        let res: Uint8Array | undefined;
-        service.cameraCborReceiver$.subscribe((response: Uint8Array) => {
+    it("should return camera imageString over ros topic", () => {
+        service.subscribeCameraReseiver();
+        let res: string | undefined;
+        service.cameraReciver$.subscribe((response) => {
             res = response;
         });
-        const testData = new Uint8Array([0xFF, 0xD8, 0xFF, 0xE0]); // JPEG magic bytes
+        rosService.cameraReceiver$.next("TestString");
+        expect(res).toBe("TestString");
+    });
+
+    it("should return camera CBOR binary data over ros topic", () => {
+        let res: JpegBytes | undefined;
+        service.cameraCborReceiver$.subscribe((response: JpegBytes) => {
+            res = response;
+        });
+        const testData = new Uint8Array([0xff, 0xd8, 0xff, 0xe0]); // JPEG magic bytes
         rosService.cameraCborReceiver$.next(testData);
         expect(res).toEqual(testData);
     });

@@ -16,6 +16,7 @@ import {rosDataTypes} from "../../ros-types/path/ros-datatypes.enum";
 import {rosTopics} from "../../ros-types/path/ros-topics.enum";
 import {
     AiDetectionMessage,
+    JpegBytes,
     AiConfig,
     AiAvailableModelsMessage,
     AiCurrentModelMessage,
@@ -119,10 +120,11 @@ export class RosService implements IRosService {
     > = new BehaviorSubject<SolidStateRelayState | undefined>(undefined);
 
     // CBOR Camera (binary JPEG, faster than base64)
-    cameraCborReceiver$: Subject<Uint8Array> = new Subject<Uint8Array>();
+    cameraCborReceiver$: Subject<JpegBytes> = new Subject<JpegBytes>();
 
     // AI Detection subjects
-    aiDetectionsReceiver$: Subject<AiDetectionMessage> = new Subject<AiDetectionMessage>();
+    aiDetectionsReceiver$: Subject<AiDetectionMessage> =
+        new Subject<AiDetectionMessage>();
     aiAvailableModelsReceiver$: BehaviorSubject<AiAvailableModelsMessage | null> =
         new BehaviorSubject<AiAvailableModelsMessage | null>(null);
     aiCurrentModelReceiver$: BehaviorSubject<AiCurrentModelMessage | null> =
@@ -130,8 +132,10 @@ export class RosService implements IRosService {
 
     // IMU subjects
     imuDataReceiver$: Subject<ImuData> = new Subject<ImuData>();
-    imuAccelerometerReceiver$: Subject<Vector3Stamped> = new Subject<Vector3Stamped>();
-    imuGyroscopeReceiver$: Subject<Vector3Stamped> = new Subject<Vector3Stamped>();
+    imuAccelerometerReceiver$: Subject<Vector3Stamped> =
+        new Subject<Vector3Stamped>();
+    imuGyroscopeReceiver$: Subject<Vector3Stamped> =
+        new Subject<Vector3Stamped>();
 
     private ros!: ROSLIB.Ros;
 
@@ -227,7 +231,7 @@ export class RosService implements IRosService {
             this.initSubscribers();
             this.connectionStatusSubject.next(true);
         });
-        this.ros.on("error", (error: string) => {
+        this.ros.on("error", (error: unknown) => {
             console.log("Error connecting to ROSBridge server:", error);
             this.connectionStatusSubject.next(false);
         });
@@ -320,7 +324,7 @@ export class RosService implements IRosService {
         this.cameraCborTopic = this.createRosTopicWithCompression(
             rosTopics.cameraImageCbor,
             rosDataTypes.compressedImage,
-            'cbor',
+            "cbor",
         );
         this.cameraConfigTopic = this.createRosTopic(
             rosTopics.cameraConfig,
@@ -409,10 +413,7 @@ export class RosService implements IRosService {
         );
     }
 
-    private createRosService(
-        serviceName: string,
-        serviceType: string,
-    ): ROSLIB.Service {
+    private createRosService(serviceName: string, serviceType: string): any {
         return new ROSLIB.Service({
             ros: this.ros,
             name: serviceName,
@@ -438,7 +439,7 @@ export class RosService implements IRosService {
     private createRosTopicWithCompression<T>(
         topicName: string,
         topicMessageType: string,
-        compression: 'cbor' | 'png' | 'none' = 'cbor',
+        compression: "cbor" | "png" | "none" = "cbor",
     ): ROSLIB.Topic<T> {
         return new ROSLIB.Topic({
             ros: this.ros,
@@ -586,7 +587,7 @@ export class RosService implements IRosService {
         const successCallback = (response: ExistTokenResponse) => {
             subject.next(response);
         };
-        const errorCallback = (error: any) => {
+        const errorCallback = (_error: any) => {
             subject.next(failedResponse);
         };
         this.existTokenService.callService({}, successCallback, errorCallback);
@@ -595,7 +596,7 @@ export class RosService implements IRosService {
     }
 
     deleteTokenMessage() {
-        const message = new ROSLIB.Message({});
+        const message = {};
         this.deleteTokenTopic.publish(message);
     }
 
@@ -614,7 +615,7 @@ export class RosService implements IRosService {
         const successCallback = (response: DecryptTokenResponse) => {
             subject.next(response.successful);
         };
-        const errorCallback = (error: any) => {
+        const errorCallback = (_error: any) => {
             subject.next(false);
         };
 
@@ -639,7 +640,7 @@ export class RosService implements IRosService {
         const successCallback = (response: EncryptTokenResponse) => {
             subject.next(response.successful);
         };
-        const errorCallback = (error: any) => {
+        const errorCallback = (_error: any) => {
             subject.next(false);
         };
 
@@ -871,7 +872,7 @@ export class RosService implements IRosService {
             console.error("ROS is not connected.");
             return;
         }
-        const message = new ROSLIB.Message({data: period});
+        const message = {data: period};
         this.cameraTimerPeriodTopic.publish(message);
     }
 
@@ -880,7 +881,7 @@ export class RosService implements IRosService {
             console.error("ROS is not connected.");
             return;
         }
-        const message = new ROSLIB.Message({data: [width, height]});
+        const message = {data: [width, height]};
         this.cameraPreviewSizeTopic.publish(message);
     }
 
@@ -889,7 +890,7 @@ export class RosService implements IRosService {
             console.error("ROS is not connected.");
             return;
         }
-        const message = new ROSLIB.Message({data: factor});
+        const message = {data: factor};
         this.cameraQualityFactorTopic.publish(message);
     }
 
@@ -908,27 +909,29 @@ export class RosService implements IRosService {
             // message.data is a Uint8Array containing raw JPEG bytes
             if (message.data) {
                 // Convert from array-like to Uint8Array if needed
-                const data = message.data instanceof Uint8Array
-                    ? message.data
-                    : new Uint8Array(message.data);
+                const data: JpegBytes = new Uint8Array(message.data);
                 this.cameraCborReceiver$.next(data);
             }
         });
     }
 
     unsubscribeCameraCborTopic() {
-        this.cameraCborTopic.unsubscribe();
+        this.cameraCborTopic?.unsubscribe();
     }
 
     /**
      * Publish camera configuration
      */
-    publishCameraConfig(config: {fps?: number; quality?: number; resolution?: [number, number]}) {
+    publishCameraConfig(config: {
+        fps?: number;
+        quality?: number;
+        resolution?: [number, number];
+    }) {
         if (!this.cameraConfigTopic) {
             console.error("ROS is not connected.");
             return;
         }
-        const message = new ROSLIB.Message({data: JSON.stringify(config)});
+        const message = {data: JSON.stringify(config)};
         this.cameraConfigTopic.publish(message);
     }
 
@@ -950,7 +953,9 @@ export class RosService implements IRosService {
         // Also subscribe to model info topics
         this.aiAvailableModelsTopic.subscribe((message: any) => {
             try {
-                const models: AiAvailableModelsMessage = JSON.parse(message.data);
+                const models: AiAvailableModelsMessage = JSON.parse(
+                    message.data,
+                );
                 this.aiAvailableModelsReceiver$.next(models);
             } catch (e) {
                 console.error("Failed to parse available models:", e);
@@ -959,7 +964,9 @@ export class RosService implements IRosService {
 
         this.aiCurrentModelTopic.subscribe((message: any) => {
             try {
-                const currentModel: AiCurrentModelMessage = JSON.parse(message.data);
+                const currentModel: AiCurrentModelMessage = JSON.parse(
+                    message.data,
+                );
                 this.aiCurrentModelReceiver$.next(currentModel);
             } catch (e) {
                 console.error("Failed to parse current model:", e);
@@ -968,9 +975,9 @@ export class RosService implements IRosService {
     }
 
     unsubscribeAiDetectionsTopic() {
-        this.aiDetectionsTopic.unsubscribe();
-        this.aiAvailableModelsTopic.unsubscribe();
-        this.aiCurrentModelTopic.unsubscribe();
+        this.aiDetectionsTopic?.unsubscribe();
+        this.aiAvailableModelsTopic?.unsubscribe();
+        this.aiCurrentModelTopic?.unsubscribe();
     }
 
     /**
@@ -981,7 +988,7 @@ export class RosService implements IRosService {
             console.error("ROS is not connected.");
             return;
         }
-        const message = new ROSLIB.Message({data: JSON.stringify(config)});
+        const message = {data: JSON.stringify(config)};
         this.aiConfigTopic.publish(message);
     }
 
@@ -997,7 +1004,7 @@ export class RosService implements IRosService {
     }
 
     unsubscribeImuDataTopic() {
-        this.imuDataTopic.unsubscribe();
+        this.imuDataTopic?.unsubscribe();
     }
 
     /**
@@ -1010,7 +1017,7 @@ export class RosService implements IRosService {
     }
 
     unsubscribeImuAccelerometerTopic() {
-        this.imuAccelerometerTopic.unsubscribe();
+        this.imuAccelerometerTopic?.unsubscribe();
     }
 
     /**
@@ -1023,7 +1030,7 @@ export class RosService implements IRosService {
     }
 
     unsubscribeImuGyroscopeTopic() {
-        this.imuGyroscopeTopic.unsubscribe();
+        this.imuGyroscopeTopic?.unsubscribe();
     }
 
     /**
@@ -1034,7 +1041,7 @@ export class RosService implements IRosService {
             console.error("ROS is not connected.");
             return;
         }
-        const message = new ROSLIB.Message({data: JSON.stringify(config)});
+        const message = {data: JSON.stringify(config)};
         this.imuConfigTopic.publish(message);
     }
 }

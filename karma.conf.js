@@ -30,6 +30,9 @@ module.exports = function (config) {
             reporters: [{type: "lcov"}, {type: "html"}, {type: "text-summary"}],
         },
         reporters: ["progress", "kjhtml"],
+        files: [
+            { pattern: "./src/index.html", watched: true, included: false, served: true }
+        ],
         browsers: ["Chrome"],
         customLaunchers: {
             NoSandbox: {
@@ -37,6 +40,9 @@ module.exports = function (config) {
                 flags: ["--no-sandbox"],
             },
         },
+        browserNoActivityTimeout: 60000,
+        browserDisconnectTimeout: 10000,
+        browserDisconnectTolerance: 3,
         restartOnFileChange: true,
     });
 };

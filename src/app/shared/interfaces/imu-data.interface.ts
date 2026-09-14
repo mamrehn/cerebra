@@ -50,17 +50,21 @@ export interface Vector3Stamped {
     vector: Vector3;
 }
 
+/** Sampling rates the BMI270 accepts, in Hz */
+export type ImuFrequency = 25 | 50 | 100 | 200 | 250;
+
 /**
- * IMU configuration for publishing to /imu/config
- * Valid frequencies: 25, 50, 100, 200, 250 Hz
+ * IMU configuration for publishing to the IMU config topic
  * Note: BMI270 rounds down to nearest available frequency
  */
 export interface ImuConfig {
-    frequency: 25 | 50 | 100 | 200 | 250;
+    frequency: ImuFrequency;
 }
 
 /** Valid IMU frequencies for the BMI270 sensor */
-export const VALID_IMU_FREQUENCIES: readonly number[] = [25, 50, 100, 200, 250] as const;
+export const VALID_IMU_FREQUENCIES: readonly ImuFrequency[] = [
+    25, 50, 100, 200, 250,
+] as const;
 
 /**
  * Compute magnitude of a 3D vector
@@ -72,7 +76,10 @@ export function vectorMagnitude(v: Vector3): number {
 /**
  * Convert IMU timestamp to milliseconds
  */
-export function imuTimestampToMs(stamp: {sec: number; nanosec: number}): number {
+export function imuTimestampToMs(stamp: {
+    sec: number;
+    nanosec: number;
+}): number {
     return stamp.sec * 1000 + stamp.nanosec / 1_000_000;
 }
 
@@ -80,16 +87,26 @@ export function imuTimestampToMs(stamp: {sec: number; nanosec: number}): number 
  * Calculate roll and pitch from accelerometer data (in radians)
  * Note: Yaw cannot be determined from accelerometer alone
  */
-export function accelerometerToRollPitch(accel: Vector3): {roll: number; pitch: number} {
+export function accelerometerToRollPitch(accel: Vector3): {
+    roll: number;
+    pitch: number;
+} {
     const roll = Math.atan2(accel.y, accel.z);
-    const pitch = Math.atan2(-accel.x, Math.sqrt(accel.y * accel.y + accel.z * accel.z));
+    const pitch = Math.atan2(
+        -accel.x,
+        Math.sqrt(accel.y * accel.y + accel.z * accel.z),
+    );
     return {roll, pitch};
 }
 
 /**
  * Convert quaternion to Euler angles (roll, pitch, yaw) in radians
  */
-export function quaternionToEuler(q: Quaternion): {roll: number; pitch: number; yaw: number} {
+export function quaternionToEuler(q: Quaternion): {
+    roll: number;
+    pitch: number;
+    yaw: number;
+} {
     // Roll (x-axis rotation)
     const sinr_cosp = 2 * (q.w * q.x + q.y * q.z);
     const cosr_cosp = 1 - 2 * (q.x * q.x + q.y * q.y);
@@ -99,7 +116,7 @@ export function quaternionToEuler(q: Quaternion): {roll: number; pitch: number; 
     const sinp = 2 * (q.w * q.y - q.z * q.x);
     let pitch: number;
     if (Math.abs(sinp) >= 1) {
-        pitch = Math.sign(sinp) * Math.PI / 2; // Use 90 degrees if out of range
+        pitch = (Math.sign(sinp) * Math.PI) / 2; // Use 90 degrees if out of range
     } else {
         pitch = Math.asin(sinp);
     }

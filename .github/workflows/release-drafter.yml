@@ -1,0 +1,30 @@
+name: Release Drafter
+
+on:
+  push:
+    branches:
+      - develop
+  pull_request_target:
+    types: [opened, reopened, labeled, unlabeled]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  update_release_draft:
+    permissions:
+      contents: write
+      pull-requests: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: release-drafter/release-drafter@v6
+        with:
+          config-name: release-drafter.yml
+          # Pin the draft to `develop`: publishing the release must create the
+          # git tag at the develop tip, not on the default branch (main).
+          # The develop -> main merge then carries that tag onto main, where
+          # the Docker Build Pipeline reads it. See docs/RELEASE.md.
+          commitish: develop
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

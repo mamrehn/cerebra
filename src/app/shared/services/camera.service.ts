@@ -4,13 +4,8 @@ import {UrlConstants} from "../../shared/services/url.constants";
 import {BehaviorSubject, Subject, catchError, throwError} from "rxjs";
 import {Injectable} from "@angular/core";
 import {RosService} from "./ros-service/ros.service";
-import {
-    AiDetectionMessage,
-    AiConfig,
-    AiAvailableModelsMessage,
-    AiCurrentModelMessage,
-} from "../interfaces/ai-detection.interface";
-import {ImuData, Vector3Stamped, ImuConfig} from "../interfaces/imu-data.interface";
+import {AiConfig} from "../interfaces/ai-detection.interface";
+import {ImuConfig} from "../interfaces/imu-data.interface";
 
 @Injectable({
     providedIn: "root",
@@ -29,10 +24,14 @@ export class CameraService {
         this.subscribeCameraQualityFactorReceiver();
         this.subscribeCameraPreviewSizeReceiver();
         this.subscribeCameraTimerPeriodReceiver();
+        this.subscribeCameraReseiver();
     }
     rosCameraQualityFactorReceiver =
         this.rosService.cameraQualityFactorReceiver$;
     rosCameraTimerPeriodReceiver = this.rosService.cameraTimerPeriodReceiver$;
+
+    // base64 JPEG stream, kept as the fallback for backends without CBOR
+    cameraReciver$: Subject<string> = new Subject<string>();
 
     // CBOR binary camera stream (Uint8Array of raw JPEG bytes)
     cameraCborReceiver$ = this.rosService.cameraCborReceiver$;
@@ -143,20 +142,29 @@ export class CameraService {
         this.rosService.setPreviewSize(width, height);
     }
 
-    // ==================== CBOR Camera (Binary JPEG) ====================
+    // ==================== Camera ====================
 
-    /**
-     * Start CBOR camera stream (binary JPEG, faster than base64)
-     */
-    startCamera() {
-        this.rosService.subscribeCameraCborTopic();
+    subscribeCameraReseiver() {
+        this.rosService.cameraReceiver$.subscribe((message: string) => {
+            this.cameraReciver$.next(message);
+        });
     }
 
     /**
-     * Stop CBOR camera stream
+     * Start both camera streams: the binary CBOR stream and the base64
+     * fallback. The component renders whichever is delivering frames.
+     */
+    startCamera() {
+        this.rosService.subscribeCameraCborTopic();
+        this.rosService.subscribeCameraTopic();
+    }
+
+    /**
+     * Stop both camera streams
      */
     stopCamera() {
         this.rosService.unsubscribeCameraCborTopic();
+        this.rosService.unsubscribeCameraTopic();
     }
 
     // ==================== AI Detection ====================

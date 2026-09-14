@@ -5,22 +5,33 @@ import {
     OnInit,
     ViewChild,
     AfterViewInit,
+    ChangeDetectionStrategy,
 } from "@angular/core";
-import {FormControl} from "@angular/forms";
+import {FormControl, FormsModule, ReactiveFormsModule} from "@angular/forms";
 import {Observable, Subject, map, takeUntil} from "rxjs";
 import {CameraSettings} from "../shared/types/camera-settings";
 import {CameraService} from "../shared/services/camera.service";
+import {
+    NgbDropdown,
+    NgbDropdownToggle,
+    NgbDropdownMenu,
+    NgbDropdownButtonItem,
+    NgbDropdownItem,
+} from "@ng-bootstrap/ng-bootstrap/dropdown";
+import {NgbPopover} from "@ng-bootstrap/ng-bootstrap/popover";
+import {HorizontalSliderComponent} from "../sliders/horizontal-slider/horizontal-slider.component";
 import {
     AiDetectionMessage,
     AiModelInfo,
     AiCurrentModelMessage,
     Detection,
     DetectionResult,
+    JpegBytes,
     getLabelName,
-    COCO_LABELS,
 } from "../shared/interfaces/ai-detection.interface";
 import {
     ImuData,
+    ImuFrequency,
     quaternionToEuler,
     radToDeg,
 } from "../shared/interfaces/imu-data.interface";
@@ -29,13 +40,26 @@ import {
     selector: "app-camera",
     templateUrl: "./camera.component.html",
     styleUrls: ["./camera.component.scss"],
+    changeDetection: ChangeDetectionStrategy.Eager,
+    imports: [
+        ReactiveFormsModule,
+        FormsModule,
+        NgbDropdown,
+        NgbDropdownToggle,
+        NgbDropdownMenu,
+        NgbDropdownButtonItem,
+        NgbDropdownItem,
+        NgbPopover,
+        HorizontalSliderComponent,
+    ],
 })
 export class CameraComponent implements OnInit, OnDestroy, AfterViewInit {
     @ViewChild("videobox") videoBox?: ElementRef;
     @ViewChild("refreshRate") refreshRateSlider!: ElementRef;
     @ViewChild("qualityFactor") qualityFactorSlider!: ElementRef;
     @ViewChild("cameraCanvas") cameraCanvas!: ElementRef<HTMLCanvasElement>;
-    @ViewChild("aiOverlayCanvas") aiOverlayCanvas?: ElementRef<HTMLCanvasElement>;
+    @ViewChild("aiOverlayCanvas")
+    aiOverlayCanvas?: ElementRef<HTMLCanvasElement>;
 
     private destroy$ = new Subject<void>();
 
@@ -48,6 +72,13 @@ export class CameraComponent implements OnInit, OnDestroy, AfterViewInit {
     cameraActiveIcon =
         "M880-275 720-435v111L244-800h416q24 0 42 18t18 42v215l160-160v410ZM848-27 39-836l42-42L890-69l-42 42ZM159-800l561 561v19q0 24-18 42t-42 18H140q-24 0-42-18t-18-42v-520q0-24 18-42t42-18h19Z";
     placeholderImage = "../../assets/camera-placeholder.jpg";
+    /** base64 fallback frame, used until the CBOR stream delivers its first frame */
+    imageSrc!: string;
+    /** true once a binary CBOR frame has arrived; switches rendering to the canvas */
+    cborActive = false;
+    private cborSubscribed = false;
+    private aiSubscribed = false;
+    private imuSubscribed = false;
 
     // AI controls
     toggleAi = new FormControl(false);
@@ -60,7 +91,8 @@ export class CameraComponent implements OnInit, OnDestroy, AfterViewInit {
     toggleImu = new FormControl(false);
     imuEnabled = false;
     imuData: ImuData | null = null;
-    imuFrequency: 25 | 50 | 100 | 200 | 250 = 100;
+    imuFrequency: ImuFrequency = 100;
+    readonly imuFrequencies: ImuFrequency[] = [25, 50, 100, 200, 250];
     orientation = {roll: 0, pitch: 0, yaw: 0};
 
     cameraSettings: CameraSettings | undefined;
@@ -76,6 +108,17 @@ export class CameraComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     ngOnInit(): void {
+        this.subscribeCameraReseiver();
+        this.imageSrc = this.placeholderImage;
+        this.cameraService.cameraReciver$
+            .pipe(takeUntil(this.destroy$))
+            .subscribe((message) => {
+                if (message.startsWith("Camera not available")) {
+                    this.imageSrc = "../../assets/camera-error-image.svg";
+                    return;
+                }
+                this.imageSrc = "data:image/jpeg;base64," + message;
+            });
         this.qualityReceiver$ =
             this.cameraService.rosCameraQualityFactorReceiver.pipe(
                 map((n) => [n]),
@@ -103,9 +146,12 @@ export class CameraComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     ngAfterViewInit(): void {
-        // Initialize camera canvas context
+        // Both canvases are always mounted, so their contexts resolve here once.
         if (this.cameraCanvas) {
             this.cameraCtx = this.cameraCanvas.nativeElement.getContext("2d");
+        }
+        if (this.aiOverlayCanvas) {
+            this.aiCtx = this.aiOverlayCanvas.nativeElement.getContext("2d");
         }
     }
 
@@ -113,8 +159,14 @@ export class CameraComponent implements OnInit, OnDestroy, AfterViewInit {
         this.destroy$.next();
         this.destroy$.complete();
         this.stopCamera();
-        this.stopAiDetection();
-        this.stopImu();
+        // Only tear down what was actually started; the AI/IMU topics do not
+        // exist until they are first subscribed.
+        if (this.aiEnabled) {
+            this.stopAiDetection();
+        }
+        if (this.imuEnabled) {
+            this.stopImu();
+        }
         this.cameraSettings!.isActive = false;
 
         // Clean up blob URL
@@ -166,24 +218,34 @@ export class CameraComponent implements OnInit, OnDestroy, AfterViewInit {
 
     startCamera() {
         this.cameraService.startCamera();
-
-        // Subscribe to CBOR binary camera stream
-        this.cameraService.cameraCborReceiver$
-            .pipe(takeUntil(this.destroy$))
-            .subscribe((jpegData: Uint8Array) => {
-                this.renderJpegToCanvas(jpegData);
-            });
+        if (!this.cborSubscribed) {
+            this.cborSubscribed = true;
+            // Binary CBOR stream; the first frame switches rendering to the canvas
+            this.cameraService.cameraCborReceiver$
+                .pipe(takeUntil(this.destroy$))
+                .subscribe((jpegData: JpegBytes) => {
+                    this.cborActive = true;
+                    this.renderJpegToCanvas(jpegData);
+                });
+        }
     }
 
     stopCamera() {
         this.cameraService.stopCamera();
         this.clearCanvas();
+        this.cborActive = false;
+        this.imageSrc = this.placeholderImage;
+    }
+
+    /** Keeps the upstream base64 stream flowing as a fallback for backends without CBOR. */
+    subscribeCameraReseiver() {
+        this.cameraService.subscribeCameraReseiver();
     }
 
     /**
      * Render raw JPEG bytes to canvas (CBOR binary stream)
      */
-    private renderJpegToCanvas(jpegData: Uint8Array): void {
+    private renderJpegToCanvas(jpegData: JpegBytes): void {
         if (!this.cameraCtx) return;
 
         // Clean up previous blob URL
@@ -200,7 +262,13 @@ export class CameraComponent implements OnInit, OnDestroy, AfterViewInit {
         img.onload = () => {
             if (this.cameraCtx && this.cameraCanvas) {
                 const canvas = this.cameraCanvas.nativeElement;
-                this.cameraCtx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                this.cameraCtx.drawImage(
+                    img,
+                    0,
+                    0,
+                    canvas.width,
+                    canvas.height,
+                );
             }
         };
         img.src = this.currentBlobUrl;
@@ -260,14 +328,8 @@ export class CameraComponent implements OnInit, OnDestroy, AfterViewInit {
     startAiDetection() {
         this.cameraService.startAiDetection();
 
-        // Initialize AI overlay canvas context
-        setTimeout(() => {
-            if (this.aiOverlayCanvas) {
-                this.aiCtx = this.aiOverlayCanvas.nativeElement.getContext("2d");
-            }
-        }, 100);
-
-        // Subscribe to AI detections
+        if (this.aiSubscribed) return;
+        this.aiSubscribed = true;
         this.cameraService.aiDetectionsReceiver$
             .pipe(takeUntil(this.destroy$))
             .subscribe((detection: AiDetectionMessage) => {
@@ -330,7 +392,9 @@ export class CameraComponent implements OnInit, OnDestroy, AfterViewInit {
         this.aiCtx.strokeRect(x, y, width, height);
 
         // Draw label background
-        const labelText = `${getLabelName(label)} ${(confidence * 100).toFixed(0)}%`;
+        const labelText = `${getLabelName(label)} ${(confidence * 100).toFixed(
+            0,
+        )}%`;
         this.aiCtx.font = "14px Arial";
         const textMetrics = this.aiCtx.measureText(labelText);
         const textHeight = 18;
@@ -354,9 +418,21 @@ export class CameraComponent implements OnInit, OnDestroy, AfterViewInit {
      */
     private getLabelColor(labelId: number): string {
         const colors = [
-            "#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7",
-            "#DDA0DD", "#98D8C8", "#F7DC6F", "#BB8FCE", "#85C1E9",
-            "#F8B500", "#00CED1", "#FF69B4", "#32CD32", "#FFD700",
+            "#FF6B6B",
+            "#4ECDC4",
+            "#45B7D1",
+            "#96CEB4",
+            "#FFEAA7",
+            "#DDA0DD",
+            "#98D8C8",
+            "#F7DC6F",
+            "#BB8FCE",
+            "#85C1E9",
+            "#F8B500",
+            "#00CED1",
+            "#FF69B4",
+            "#32CD32",
+            "#FFD700",
         ];
         return colors[labelId % colors.length];
     }
@@ -369,7 +445,10 @@ export class CameraComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     getDetectionCount(): number {
-        if (!this.latestDetection || this.latestDetection.type !== "detection") {
+        if (
+            !this.latestDetection ||
+            this.latestDetection.type !== "detection"
+        ) {
             return 0;
         }
         const result = this.latestDetection.result as DetectionResult;
@@ -390,7 +469,11 @@ export class CameraComponent implements OnInit, OnDestroy, AfterViewInit {
     startImu() {
         this.cameraService.startImuData();
 
-        // Subscribe to IMU data
+        // Set initial frequency
+        this.setImuFrequency();
+
+        if (this.imuSubscribed) return;
+        this.imuSubscribed = true;
         this.cameraService.imuDataReceiver$
             .pipe(takeUntil(this.destroy$))
             .subscribe((data: ImuData) => {
@@ -406,9 +489,6 @@ export class CameraComponent implements OnInit, OnDestroy, AfterViewInit {
                     };
                 }
             });
-
-        // Set initial frequency
-        this.setImuFrequency();
     }
 
     stopImu() {

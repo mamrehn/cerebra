@@ -22,6 +22,18 @@ import {ProxyRunProgramFeedback} from "../../ros-types/msg/proxy-run-program-fee
 import {ProxyRunProgramResult} from "../../ros-types/msg/proxy-run-program-result";
 import {ProxyRunProgramStatus} from "../../ros-types/msg/proxy-run-program-status";
 import {orangeJpegBase64, redJpegBase64} from "./ros-mock-data";
+import {
+    AiAvailableModelsMessage,
+    AiConfig,
+    AiCurrentModelMessage,
+    AiDetectionMessage,
+    JpegBytes,
+} from "../../interfaces/ai-detection.interface";
+import {
+    ImuConfig,
+    ImuData,
+    Vector3Stamped,
+} from "../../interfaces/imu-data.interface";
 import {GoalStatus, isTerminal} from "../../ros-types/action/goal-status";
 import {IRosService} from "./i-ros-service";
 import {ApiService} from "../api.service";
@@ -109,6 +121,18 @@ export class RosService implements IRosService {
     cameraTimerPeriodReceiver$: BehaviorSubject<number> =
         new BehaviorSubject<number>(0.1);
     cameraReceiver$: Subject<string> = new Subject<string>();
+    cameraCborReceiver$: Subject<JpegBytes> = new Subject<JpegBytes>();
+    aiDetectionsReceiver$: Subject<AiDetectionMessage> =
+        new Subject<AiDetectionMessage>();
+    aiAvailableModelsReceiver$: BehaviorSubject<AiAvailableModelsMessage | null> =
+        new BehaviorSubject<AiAvailableModelsMessage | null>(null);
+    aiCurrentModelReceiver$: BehaviorSubject<AiCurrentModelMessage | null> =
+        new BehaviorSubject<AiCurrentModelMessage | null>(null);
+    imuDataReceiver$: Subject<ImuData> = new Subject<ImuData>();
+    imuAccelerometerReceiver$: Subject<Vector3Stamped> =
+        new Subject<Vector3Stamped>();
+    imuGyroscopeReceiver$: Subject<Vector3Stamped> =
+        new Subject<Vector3Stamped>();
     cameraPreviewSizeReceiver$: BehaviorSubject<number[]> = new BehaviorSubject<
         number[]
     >([0, 0]);
@@ -137,10 +161,17 @@ export class RosService implements IRosService {
             turned_on: false,
         });
     cameraTimer: any;
+    cameraCborTimer: any;
+    aiDetectionTimer: any;
+    imuTimer: any;
+    private imuFrequency = 100;
 
     private motorNames = motors.map((motor) => motor.motorName);
 
     private isListeningFromChatId: Map<string, boolean> = new Map();
+
+    private connectionStatusSubject = new BehaviorSubject<boolean>(true);
+    public connectionStatus$ = this.connectionStatusSubject.asObservable();
 
     constructor(private apiService: ApiService) {
         let currentToggle: boolean = true;
@@ -188,6 +219,14 @@ export class RosService implements IRosService {
         return new BehaviorSubject(this.getIsListening(chatId));
     }
 
+    /**
+     * Simulated first-token delay for a warm in-process Hermes agent (PR-1521).
+     * Must stay well under 1000 ms so local mock mirrors < 1s TTFT.
+     */
+    static readonly WARM_AGENT_FIRST_TOKEN_MS = 300;
+    /** Delay between streaming overwrite chunks in the "update" mock path. */
+    static readonly WARM_AGENT_STREAM_CHUNK_MS = 200;
+
     sendChatMessage(chatId: string, content: string): Observable<void> {
         console.info(JSON.stringify({chat_id: chatId, content: content}));
         const listening = this.getIsListening(chatId);
@@ -201,10 +240,10 @@ export class RosService implements IRosService {
             ).subscribe((_) => {
                 this.setIsListening(chatId, true);
             });
-        }, 2000);
+        }, RosService.WARM_AGENT_FIRST_TOKEN_MS);
         if (content.toLocaleLowerCase() == "update") {
             setTimeout(async () => {
-                await this.sleep(1500);
+                await this.sleep(RosService.WARM_AGENT_STREAM_CHUNK_MS);
                 this.updateMessage(
                     chatId,
                     `this is the response to your input "${content}". Second line for "${content}".`,
@@ -212,7 +251,7 @@ export class RosService implements IRosService {
                 ).subscribe((_) => {
                     this.setIsListening(chatId, true);
                 });
-            }, 2000);
+            }, RosService.WARM_AGENT_FIRST_TOKEN_MS);
         }
         return new BehaviorSubject<void>(undefined);
     }
@@ -416,6 +455,190 @@ export class RosService implements IRosService {
     unsubscribeCameraTopic(): void {
         clearInterval(this.cameraTimer);
         this.cameraTimer = undefined;
+    }
+
+    // ==================== CBOR Camera ====================
+
+    private static base64ToBytes(base64: string): JpegBytes {
+        const binary = atob(base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+            bytes[i] = binary.charCodeAt(i);
+        }
+        return bytes;
+    }
+
+    subscribeCameraCborTopic(): void {
+        if (this.cameraCborTimer) return;
+        let toggle = true;
+        this.cameraCborTimer = setInterval(() => {
+            toggle = !toggle;
+            this.cameraCborReceiver$.next(
+                RosService.base64ToBytes(
+                    toggle ? orangeJpegBase64 : redJpegBase64,
+                ),
+            );
+        }, 500);
+    }
+
+    unsubscribeCameraCborTopic(): void {
+        clearInterval(this.cameraCborTimer);
+        this.cameraCborTimer = undefined;
+    }
+
+    publishCameraConfig(config: {
+        fps?: number;
+        quality?: number;
+        resolution?: [number, number];
+    }): void {
+        console.info(JSON.stringify(config));
+    }
+
+    // ==================== AI Detection ====================
+
+    subscribeAiDetectionsTopic(): void {
+        this.aiAvailableModelsReceiver$.next({
+            models: [
+                {
+                    name: "mobilenet-ssd",
+                    type: "detection",
+                    description: "Mock detector",
+                    num_classes: 80,
+                    input_size: [300, 300],
+                },
+            ],
+        });
+        this.aiCurrentModelReceiver$.next({
+            model: "mobilenet-ssd",
+            type: "detection",
+            active: true,
+            confidence: 0.5,
+        });
+        if (this.aiDetectionTimer) return;
+        let frame = 0;
+        this.aiDetectionTimer = setInterval(() => {
+            frame++;
+            // A single box drifting across the frame, so the overlay is visible.
+            const offset = (frame % 20) / 40;
+            this.aiDetectionsReceiver$.next({
+                model: "mobilenet-ssd",
+                type: "detection",
+                frame_id: frame,
+                timestamp_ns: Date.now() * 1_000_000,
+                latency_ms: 12.5,
+                result: {
+                    detections: [
+                        {
+                            label: 0,
+                            confidence: 0.87,
+                            bbox: {
+                                xmin: 0.1 + offset,
+                                ymin: 0.2,
+                                xmax: 0.4 + offset,
+                                ymax: 0.8,
+                            },
+                        },
+                    ],
+                    count: 1,
+                },
+            });
+        }, 500);
+    }
+
+    unsubscribeAiDetectionsTopic(): void {
+        clearInterval(this.aiDetectionTimer);
+        this.aiDetectionTimer = undefined;
+    }
+
+    publishAiConfig(config: AiConfig): void {
+        console.info(JSON.stringify(config));
+        if (config.model) {
+            this.aiCurrentModelReceiver$.next({
+                model: config.model,
+                type: "detection",
+                active: true,
+                confidence: config.confidence ?? 0.5,
+            });
+        }
+    }
+
+    // ==================== IMU ====================
+
+    private static mockHeader() {
+        const now = Date.now();
+        return {
+            stamp: {
+                sec: Math.floor(now / 1000),
+                nanosec: (now % 1000) * 1_000_000,
+            },
+            frame_id: "oak_imu_frame",
+        };
+    }
+
+    subscribeImuDataTopic(): void {
+        if (this.imuTimer) return;
+        let t = 0;
+        this.imuTimer = setInterval(() => {
+            t += 0.1;
+            this.imuDataReceiver$.next({
+                header: RosService.mockHeader(),
+                orientation: {
+                    x: 0,
+                    y: 0,
+                    z: Math.sin(t / 2),
+                    w: Math.cos(t / 2),
+                },
+                orientation_covariance: new Array(9).fill(0),
+                angular_velocity: {
+                    x: Math.sin(t) * 0.1,
+                    y: Math.cos(t) * 0.1,
+                    z: 0,
+                },
+                angular_velocity_covariance: new Array(9).fill(0),
+                linear_acceleration: {
+                    x: Math.sin(t) * 0.5,
+                    y: Math.cos(t) * 0.5,
+                    z: 9.81,
+                },
+                linear_acceleration_covariance: new Array(9).fill(0),
+            });
+        }, 1000 / this.imuFrequency);
+    }
+
+    unsubscribeImuDataTopic(): void {
+        clearInterval(this.imuTimer);
+        this.imuTimer = undefined;
+    }
+
+    subscribeImuAccelerometerTopic(): void {
+        this.imuAccelerometerReceiver$.next({
+            header: RosService.mockHeader(),
+            vector: {x: 0, y: 0, z: 9.81},
+        });
+    }
+
+    unsubscribeImuAccelerometerTopic(): void {
+        // nothing to tear down in the mock
+    }
+
+    subscribeImuGyroscopeTopic(): void {
+        this.imuGyroscopeReceiver$.next({
+            header: RosService.mockHeader(),
+            vector: {x: 0, y: 0, z: 0},
+        });
+    }
+
+    unsubscribeImuGyroscopeTopic(): void {
+        // nothing to tear down in the mock
+    }
+
+    publishImuConfig(config: ImuConfig): void {
+        console.info(JSON.stringify(config));
+        this.imuFrequency = config.frequency;
+        if (this.imuTimer) {
+            this.unsubscribeImuDataTopic();
+            this.subscribeImuDataTopic();
+        }
     }
 
     publishProgramInput(input: string, mpid: number) {
