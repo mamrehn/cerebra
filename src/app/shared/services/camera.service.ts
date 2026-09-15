@@ -151,12 +151,24 @@ export class CameraService {
     }
 
     /**
-     * Start both camera streams: the binary CBOR stream and the base64
-     * fallback. The component renders whichever is delivering frames.
+     * Start the binary CBOR camera stream.
+     *
+     * The base64 stream is not requested alongside it: with both topics
+     * subscribed on one rosbridge connection, pib's camera frame rate collapsed
+     * to a fraction of what either stream delivers on its own.
      */
     startCamera() {
         this.rosService.subscribeCameraCborTopic();
+    }
+
+    /** Subscribe to the base64 stream, for backends that publish no CBOR frames. */
+    startBase64Fallback() {
         this.rosService.subscribeCameraTopic();
+    }
+
+    /** Drop the base64 stream once binary frames are arriving. */
+    stopBase64Fallback() {
+        this.rosService.unsubscribeCameraTopic();
     }
 
     /**

@@ -115,6 +115,16 @@ describe("CameraService", () => {
         expect("isActive" in body).toBeFalse();
     });
 
+    it("startCamera requests only the binary stream", () => {
+        const spyCbor = spyOn(rosService, "subscribeCameraCborTopic");
+        const spyBase64 = spyOn(rosService, "subscribeCameraTopic");
+
+        service.startCamera();
+
+        expect(spyCbor).toHaveBeenCalledTimes(1);
+        expect(spyBase64).not.toHaveBeenCalled();
+    });
+
     it("should return camera CBOR binary data over ros topic", () => {
         let res: JpegBytes | undefined;
         service.cameraCborReceiver$.subscribe((response: JpegBytes) => {

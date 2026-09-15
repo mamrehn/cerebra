@@ -104,13 +104,56 @@ describe("CameraComponent", () => {
         expect(component.cameraSettings?.isActive).toBeFalse();
     });
 
-    it("startCamera should subscribe to both the CBOR and the base64 camera topic", () => {
+    it("startCamera subscribes to the binary stream only", () => {
         const spySubscribeCbor = spyOn(rosService, "subscribeCameraCborTopic");
         const spySubscribe = spyOn(rosService, "subscribeCameraTopic");
         component.startCamera();
         expect(spySubscribeCbor).toHaveBeenCalled();
-        expect(spySubscribe).toHaveBeenCalled();
+        expect(spySubscribe).not.toHaveBeenCalled();
     });
+
+    it("falls back to the base64 stream when no binary frame arrives in time", fakeAsync(() => {
+        spyOn(rosService, "subscribeCameraCborTopic");
+        const spySubscribe = spyOn(rosService, "subscribeCameraTopic");
+        component.startCamera();
+
+        tick(2999);
+        expect(spySubscribe).not.toHaveBeenCalled();
+        tick(1);
+        expect(spySubscribe).toHaveBeenCalledTimes(1);
+
+        component.stopCamera();
+    }));
+
+    it("drops the base64 fallback once binary frames arrive", fakeAsync(() => {
+        spyOn(rosService, "subscribeCameraCborTopic");
+        spyOn(rosService, "subscribeCameraTopic");
+        component.startCamera();
+        tick(3000);
+
+        rosService.cameraCborReceiver$.next(
+            new Uint8Array([0xff, 0xd8, 0xff, 0xe0]),
+        );
+
+        expect(component.cborActive).toBeTrue();
+        expect(spyUnsubscribeCamera).toHaveBeenCalledTimes(1);
+
+        component.stopCamera();
+    }));
+
+    it("never requests base64 when binary frames arrive first", fakeAsync(() => {
+        spyOn(rosService, "subscribeCameraCborTopic");
+        const spySubscribe = spyOn(rosService, "subscribeCameraTopic");
+        component.startCamera();
+
+        rosService.cameraCborReceiver$.next(
+            new Uint8Array([0xff, 0xd8, 0xff, 0xe0]),
+        );
+        tick(5000);
+
+        expect(spySubscribe).not.toHaveBeenCalled();
+        component.stopCamera();
+    }));
 
     it("should stay on the base64 image until a CBOR frame arrives", () => {
         spyOn(rosService, "subscribeCameraTopic");

@@ -64,6 +64,8 @@ import {
 export class CameraComponent implements OnInit, OnDestroy, AfterViewInit {
     /** Keypoints below this confidence are too noisy to be worth drawing. */
     private static readonly KEYPOINT_MIN_CONFIDENCE = 0.3;
+    /** How long to wait for a binary frame before requesting the base64 stream. */
+    private static readonly BASE64_FALLBACK_DELAY_MS = 3000;
 
     @ViewChild("videobox") videoBox?: ElementRef;
     @ViewChild("refreshRate") refreshRateSlider!: ElementRef;
@@ -88,6 +90,8 @@ export class CameraComponent implements OnInit, OnDestroy, AfterViewInit {
     /** true once a binary CBOR frame has arrived; switches rendering to the canvas */
     cborActive = false;
     private cborSubscribed = false;
+    private base64FallbackActive = false;
+    private base64FallbackTimer?: ReturnType<typeof setTimeout>;
     private aiSubscribed = false;
     private imuSubscribed = false;
 
@@ -234,18 +238,43 @@ export class CameraComponent implements OnInit, OnDestroy, AfterViewInit {
             // Binary CBOR stream; the first frame switches rendering to the canvas
             this.cameraService.cameraCborReceiver$
                 .pipe(takeUntil(this.destroy$))
-                .subscribe((jpegData: JpegBytes) => {
-                    this.cborActive = true;
-                    this.renderJpegToCanvas(jpegData);
-                });
+                .subscribe((jpegData: JpegBytes) => this.onCborFrame(jpegData));
         }
+        // Request the base64 stream only if the binary one stays silent.
+        this.clearBase64FallbackTimer();
+        this.base64FallbackTimer = setTimeout(() => {
+            this.base64FallbackTimer = undefined;
+            if (!this.cborActive) {
+                this.base64FallbackActive = true;
+                this.cameraService.startBase64Fallback();
+            }
+        }, CameraComponent.BASE64_FALLBACK_DELAY_MS);
     }
 
     stopCamera() {
+        this.clearBase64FallbackTimer();
+        this.base64FallbackActive = false;
         this.cameraService.stopCamera();
         this.clearCanvas();
         this.cborActive = false;
         this.imageSrc = this.placeholderImage;
+    }
+
+    private onCborFrame(jpegData: JpegBytes): void {
+        this.cborActive = true;
+        this.clearBase64FallbackTimer();
+        if (this.base64FallbackActive) {
+            this.base64FallbackActive = false;
+            this.cameraService.stopBase64Fallback();
+        }
+        this.renderJpegToCanvas(jpegData);
+    }
+
+    private clearBase64FallbackTimer(): void {
+        if (this.base64FallbackTimer !== undefined) {
+            clearTimeout(this.base64FallbackTimer);
+            this.base64FallbackTimer = undefined;
+        }
     }
 
     /** Keeps the upstream base64 stream flowing as a fallback for backends without CBOR. */
