@@ -1,4 +1,8 @@
-FROM node:22 AS builder
+# Angular 22 requires Node ^22.22.3 (package-lock.json engines). Pin the
+# version the CI pipeline tests with: a bare major tag can resolve to an older
+# locally cached image, because docker compose build does not pull a newer base
+# on its own, and the update runner builds without --pull.
+FROM node:22.22.3 AS builder
 # Node needs more heap than the default on a 4 GB Raspberry Pi; without this
 # the Angular build is killed. Declared as an ARG so a machine with more RAM
 # can override it via build.args in its compose file, with the Pi's value as
