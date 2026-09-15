@@ -22,11 +22,14 @@ export interface BoundingBox {
     ymax: number;
 }
 
-/** A single keypoint. The backend emits no id; position in the array is the index. */
+/**
+ * A single keypoint in normalized coordinates. `confidence` is omitted when the
+ * parser provides none (DepthAI reports -1 for those).
+ */
 export interface Keypoint {
     x: number;
     y: number;
-    confidence: number;
+    confidence?: number;
 }
 
 /**
@@ -39,19 +42,12 @@ export interface SegmentationMaskRLE {
     shape: number[];
 }
 
-/**
- * One detection. Models emitting `ImgDetectionsExtended` (pose_yolo,
- * segmentation) add keypoints and/or a mask to the same structure.
- */
+/** One detection. Pose models add keypoints to the same structure. */
 export interface Detection {
     label: number;
     confidence: number;
     bbox: BoundingBox;
     keypoints?: Keypoint[];
-    /** Present only when the model produced a mask. */
-    has_mask?: boolean;
-    /** Present only in `segmentation_mode: "mask"`. */
-    mask_rle?: SegmentationMaskRLE;
 }
 
 /** A line segment from the M-LSD model. */
@@ -61,19 +57,15 @@ export interface Line {
     confidence: number;
 }
 
-/** A single classification-style prediction (gaze and similar models). */
-export interface Prediction {
-    class: number;
-    confidence: number;
-}
-
-/** `_format_detections` / `_format_detections_extended` */
+/** `_format_detections`: native ImgDetections (detection, pose, segmentation). */
 export interface DetectionResult {
     detections: Detection[];
     count: number;
+    /** Frame-level instance mask, present only in `segmentation_mode: "mask"`. */
+    mask_rle?: SegmentationMaskRLE;
 }
 
-/** `_format_keypoints` — bare keypoint list (pose_hrnet, hand) */
+/** `_format_keypoints`: a bare keypoint list, e.g. hand landmarks. */
 export interface KeypointsResult {
     keypoints: Keypoint[];
     count: number;
@@ -85,17 +77,29 @@ export interface LinesResult {
     count: number;
 }
 
-/** `_format_predictions` */
+/** `_format_predictions`: regression outputs, one number per prediction. */
 export interface PredictionsResult {
-    predictions: Prediction[];
+    predictions: number[];
     count: number;
 }
 
-/** Raw passthrough when depthai-nodes is unavailable for a parsed model. */
+/** `_format_classifications` */
+export interface ClassificationsResult {
+    classes: string[];
+    scores: number[];
+    top_class: string;
+    top_score: number;
+}
+
+/** A multi-head model (dai.MessageGroup): one formatted result per head. */
+export interface HeadsResult {
+    heads: Record<string, AiResult>;
+}
+
+/** Raw passthrough when the model output could not be parsed. */
 export interface RawResult {
     raw?: string;
     raw_layers?: string[];
-    note?: string;
     type?: string;
 }
 
@@ -110,6 +114,8 @@ export type AiResult =
     | KeypointsResult
     | LinesResult
     | PredictionsResult
+    | ClassificationsResult
+    | HeadsResult
     | RawResult
     | ErrorResult;
 
@@ -155,6 +161,21 @@ export function isPredictionsResult(
     result: AiResult,
 ): result is PredictionsResult {
     return Array.isArray((result as PredictionsResult)?.predictions);
+}
+
+export function isClassificationsResult(
+    result: AiResult,
+): result is ClassificationsResult {
+    const candidate = result as ClassificationsResult;
+    return (
+        typeof candidate?.top_class === "string" &&
+        Array.isArray(candidate.classes)
+    );
+}
+
+export function isHeadsResult(result: AiResult): result is HeadsResult {
+    const heads = (result as HeadsResult)?.heads;
+    return typeof heads === "object" && heads !== null && !Array.isArray(heads);
 }
 
 /** AI configuration published to `camera/ai/config`. */

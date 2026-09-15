@@ -24,13 +24,17 @@ import {
     AiDetectionMessage,
     AiModelInfo,
     AiCurrentModelMessage,
+    AiResult,
+    ClassificationsResult,
     Detection,
     JpegBytes,
     Keypoint,
     Line,
     getLabelName,
+    isClassificationsResult,
     isDetectionResult,
     isErrorResult,
+    isHeadsResult,
     isKeypointsResult,
     isLinesResult,
     isPredictionsResult,
@@ -396,36 +400,70 @@ export class CameraComponent implements OnInit, OnDestroy, AfterViewInit {
 
         const canvas = this.aiOverlayCanvas.nativeElement;
         this.aiCtx.clearRect(0, 0, canvas.width, canvas.height);
+        if (detection.result) {
+            this.drawResult(
+                detection.result,
+                canvas.width,
+                canvas.height,
+                detection.model,
+            );
+        }
+    }
 
-        const result = detection.result;
-        if (!result || isErrorResult(result)) return;
-
-        // The camera node picks a formatter from the runtime DepthAI output
-        // type, so several model families share the detection shape and the
-        // others are distinguished by their own keys.
+    /**
+     * Draw one formatted result. The camera node picks a formatter from the
+     * runtime DepthAI output type, so results are told apart by their keys,
+     * and multi-head models nest one result per head.
+     */
+    private drawResult(
+        result: AiResult,
+        width: number,
+        height: number,
+        modelName: string,
+    ): void {
+        if (isErrorResult(result)) return;
+        if (isHeadsResult(result)) {
+            for (const head of Object.values(result.heads)) {
+                this.drawResult(head, width, height, modelName);
+            }
+            return;
+        }
         if (isDetectionResult(result)) {
             for (const det of result.detections) {
-                this.drawBoundingBox(
-                    det,
-                    canvas.width,
-                    canvas.height,
-                    detection.model,
-                );
+                this.drawBoundingBox(det, width, height, modelName);
                 if (det.keypoints?.length) {
-                    this.drawKeypoints(
-                        det.keypoints,
-                        canvas.width,
-                        canvas.height,
-                    );
+                    this.drawKeypoints(det.keypoints, width, height);
                 }
             }
         } else if (isKeypointsResult(result)) {
-            this.drawKeypoints(result.keypoints, canvas.width, canvas.height);
+            this.drawKeypoints(result.keypoints, width, height);
         } else if (isLinesResult(result)) {
             for (const line of result.lines) {
-                this.drawLine(line, canvas.width, canvas.height);
+                this.drawLine(line, width, height);
             }
+        } else if (isClassificationsResult(result)) {
+            this.drawClassification(result);
         }
+    }
+
+    /** Show the top class of a classification in the top-left corner. */
+    private drawClassification(result: ClassificationsResult): void {
+        if (!this.aiCtx) return;
+
+        const text = `${result.top_class} ${(result.top_score * 100).toFixed(
+            0,
+        )}%`;
+        const padding = 4;
+        this.aiCtx.font = "14px Arial";
+        this.aiCtx.fillStyle = "rgba(0, 0, 0, 0.6)";
+        this.aiCtx.fillRect(
+            0,
+            0,
+            this.aiCtx.measureText(text).width + padding * 2,
+            22,
+        );
+        this.aiCtx.fillStyle = "#ffffff";
+        this.aiCtx.fillText(text, padding, 16);
     }
 
     /**
@@ -439,8 +477,12 @@ export class CameraComponent implements OnInit, OnDestroy, AfterViewInit {
         if (!this.aiCtx) return;
 
         for (const kp of keypoints) {
-            if (kp.confidence < CameraComponent.KEYPOINT_MIN_CONFIDENCE)
+            if (
+                kp.confidence !== undefined &&
+                kp.confidence < CameraComponent.KEYPOINT_MIN_CONFIDENCE
+            ) {
                 continue;
+            }
             this.aiCtx.beginPath();
             this.aiCtx.arc(
                 kp.x * canvasWidth,
@@ -567,18 +609,40 @@ export class CameraComponent implements OnInit, OnDestroy, AfterViewInit {
 
     getDetectionCount(): number {
         const result = this.latestDetection?.result;
-        if (!result || isErrorResult(result)) return 0;
+        return result ? CameraComponent.countResult(result) : 0;
+    }
+
+    /** The error text from the last inference frame or one of its heads. */
+    getDetectionError(): string | null {
+        const result = this.latestDetection?.result;
+        return result ? CameraComponent.findError(result) : null;
+    }
+
+    private static countResult(result: AiResult): number {
+        if (isErrorResult(result)) return 0;
+        if (isHeadsResult(result)) {
+            return Object.values(result.heads).reduce(
+                (sum, head) => sum + CameraComponent.countResult(head),
+                0,
+            );
+        }
         if (isDetectionResult(result)) return result.detections.length;
         if (isKeypointsResult(result)) return result.keypoints.length;
         if (isLinesResult(result)) return result.lines.length;
         if (isPredictionsResult(result)) return result.predictions.length;
+        if (isClassificationsResult(result)) return 1;
         return 0;
     }
 
-    /** The error text from the last inference frame, if it failed. */
-    getDetectionError(): string | null {
-        const result = this.latestDetection?.result;
-        return result && isErrorResult(result) ? result.error : null;
+    private static findError(result: AiResult): string | null {
+        if (isErrorResult(result)) return result.error;
+        if (isHeadsResult(result)) {
+            for (const head of Object.values(result.heads)) {
+                const error = CameraComponent.findError(head);
+                if (error) return error;
+            }
+        }
+        return null;
     }
 
     // ==================== IMU Methods ====================

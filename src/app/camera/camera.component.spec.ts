@@ -290,7 +290,7 @@ describe("CameraComponent", () => {
             frame_id: 2,
             timestamp_ns: 0,
             latency_ms: 10,
-            result: {predictions: [{class: 0, confidence: 0.6}], count: 1},
+            result: {predictions: [0.6], count: 1},
         };
         expect(component.getDetectionCount()).toBe(1);
         expect(component.getDetectionError()).toBeNull();
@@ -310,6 +310,93 @@ describe("CameraComponent", () => {
         expect(component.getDetectionError()).toBe(
             "depthai-nodes not installed",
         );
+    });
+
+    it("counts and reports errors across the heads of a multi-head model", () => {
+        component.latestDetection = {
+            model: "hand",
+            type: "hand",
+            frame_id: 3,
+            timestamp_ns: 0,
+            latency_ms: 10,
+            result: {
+                heads: {
+                    handedness: {
+                        classes: ["left", "right"],
+                        scores: [0.9, 0.1],
+                        top_class: "left",
+                        top_score: 0.9,
+                    },
+                    landmarks: {
+                        keypoints: [
+                            {x: 0.5, y: 0.5},
+                            {x: 0.6, y: 0.6},
+                        ],
+                        count: 2,
+                    },
+                },
+            },
+        };
+        expect(component.getDetectionCount()).toBe(3);
+        expect(component.getDetectionError()).toBeNull();
+
+        component.latestDetection = {
+            model: "hand",
+            type: "hand",
+            frame_id: 4,
+            timestamp_ns: 0,
+            latency_ms: 10,
+            result: {heads: {landmarks: {error: "parse failed"}}},
+        };
+        expect(component.getDetectionCount()).toBe(0);
+        expect(component.getDetectionError()).toBe("parse failed");
+    });
+
+    it("draws keypoints without a confidence and skips low-confidence ones", () => {
+        const arc = spyOn(CanvasRenderingContext2D.prototype, "arc");
+
+        component["drawAiOverlay"]({
+            model: "hand",
+            type: "hand",
+            frame_id: 1,
+            timestamp_ns: 0,
+            latency_ms: 10,
+            result: {
+                keypoints: [
+                    {x: 0.5, y: 0.5},
+                    {x: 0.1, y: 0.1, confidence: 0.1},
+                ],
+                count: 2,
+            },
+        });
+
+        expect(arc).toHaveBeenCalledTimes(1);
+    });
+
+    it("labels a classification head with its top class", () => {
+        const fillText = spyOn(CanvasRenderingContext2D.prototype, "fillText");
+
+        component["drawAiOverlay"]({
+            model: "hand",
+            type: "hand",
+            frame_id: 1,
+            timestamp_ns: 0,
+            latency_ms: 10,
+            result: {
+                heads: {
+                    handedness: {
+                        classes: ["left", "right"],
+                        scores: [0.2, 0.8],
+                        top_class: "right",
+                        top_score: 0.8,
+                    },
+                },
+            },
+        });
+
+        expect(fillText.calls.allArgs().map((args) => args[0])).toEqual([
+            "right 80%",
+        ]);
     });
 
     it("offers exactly the report rates DepthAI exposes for the BMI270", () => {
