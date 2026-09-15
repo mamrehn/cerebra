@@ -1,4 +1,7 @@
-FROM node:22 AS builder
+# Angular CLI 22 requires Node ^22.22.3 or ^24.15.0. Pin a minor version that
+# satisfies it: a bare major tag can resolve to an older locally cached image,
+# because docker compose build does not pull a newer base on its own.
+FROM node:24.21 AS builder
 
 WORKDIR /app
 
