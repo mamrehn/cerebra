@@ -25,6 +25,10 @@ export const HAND_MODEL_IDS: ReadonlyArray<string> = [
     "hand_tracking_mp",
     "imitation",
 ];
+export const POSE_MODEL_IDS: ReadonlyArray<string> = [
+    "yolo26s_pose_coco_512x288",
+    "yolo26n_pose_coco_512x288",
+];
 export const FACEMESH_MODEL_ID = "facemesh_crop";
 export const FACIAL_LANDMARKS_68_MODEL_ID = "facial_landmarks_68_crop";
 export const HEAD_POSE_MODEL_ID = "head_pose_estimation_crop";
@@ -35,6 +39,33 @@ export const QR_CODE_INDEX_PAIRS: ReadonlyArray<readonly [number, number]> = [
     [1, 2],
     [2, 3],
     [3, 0],
+];
+
+/**
+ * The 17 COCO body keypoints in model order (nose, eyes, ears, shoulders,
+ * elbows, wrists, hips, knees, ankles) and the usual skeleton between them.
+ */
+export const COCO_POSE_KEYPOINT_COUNT = 17;
+export const COCO_POSE_INDEX_PAIRS: ReadonlyArray<readonly [number, number]> = [
+    [15, 13],
+    [13, 11],
+    [16, 14],
+    [14, 12],
+    [11, 12],
+    [5, 11],
+    [6, 12],
+    [5, 6],
+    [5, 7],
+    [6, 8],
+    [7, 9],
+    [8, 10],
+    [1, 2],
+    [0, 1],
+    [0, 2],
+    [1, 3],
+    [2, 4],
+    [3, 5],
+    [4, 6],
 ];
 
 /** Five canonical contour groups: jaw, brows, nose, eyes, and lips. */
@@ -72,6 +103,7 @@ export const FACIAL_LANDMARKS_68_INDEX_PAIRS: ReadonlyArray<
 export function modelDrawsSkeleton(modelId: string): boolean {
     return (
         HAND_MODEL_IDS.includes(modelId) ||
+        POSE_MODEL_IDS.includes(modelId) ||
         modelId === FACEMESH_MODEL_ID ||
         modelId === FACIAL_LANDMARKS_68_MODEL_ID
     );
@@ -181,6 +213,13 @@ export function topologyConnections(
         return byIndexPairs(keypoints, QR_CODE_INDEX_PAIRS, 4);
     }
     if (!modelDrawsSkeleton(modelId)) return [];
+    if (POSE_MODEL_IDS.includes(modelId)) {
+        return byIndexPairs(
+            keypoints,
+            COCO_POSE_INDEX_PAIRS,
+            COCO_POSE_KEYPOINT_COUNT,
+        );
+    }
     if (modelId === FACEMESH_MODEL_ID) {
         return byIndexPairs(keypoints, FACEMESH_INDEX_PAIRS, 468);
     }

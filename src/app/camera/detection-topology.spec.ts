@@ -1,5 +1,7 @@
 import {
     boxRule,
+    COCO_POSE_INDEX_PAIRS,
+    COCO_POSE_KEYPOINT_COUNT,
     HAND_MODEL_IDS,
     labelScalars,
     FACIAL_LANDMARKS_68_CONTOURS,
@@ -7,6 +9,7 @@ import {
     FACIAL_LANDMARKS_68_MODEL_ID,
     FACEMESH_MODEL_ID,
     modelDrawsSkeleton,
+    POSE_MODEL_IDS,
     QR_CODE_INDEX_PAIRS,
     QR_CODE_MODEL_ID,
     topologyConnections,
@@ -133,5 +136,66 @@ describe("overlay label scalars", () => {
         }
         expect(labelScalars(QR_CODE_MODEL_ID)).toEqual([]);
         expect(labelScalars("head_pose_estimation_crop")).toEqual([]);
+    });
+});
+
+describe("body pose topology", () => {
+    const person = Array.from(
+        {length: COCO_POSE_KEYPOINT_COUNT},
+        (_, index) => ({
+            name: `keypoint_${index}`,
+            x: index,
+            y: index + 1,
+        }),
+    );
+
+    it("connects the 17 COCO keypoints with 19 unique in-range edges", () => {
+        const edges = COCO_POSE_INDEX_PAIRS.map(([first, second]) =>
+            [first, second].sort((left, right) => left - right).join("-"),
+        );
+
+        expect(COCO_POSE_INDEX_PAIRS.length).toBe(19);
+        expect(new Set(edges).size).toBe(edges.length);
+        expect(
+            COCO_POSE_INDEX_PAIRS.every(
+                ([first, second]) =>
+                    first >= 0 &&
+                    second >= 0 &&
+                    first < COCO_POSE_KEYPOINT_COUNT &&
+                    second < COCO_POSE_KEYPOINT_COUNT,
+            ),
+        ).toBeTrue();
+    });
+
+    it("draws the skeleton of the pose model by keypoint index", () => {
+        for (const modelId of POSE_MODEL_IDS) {
+            expect(modelDrawsSkeleton(modelId)).toBeTrue();
+            const connections = topologyConnections(modelId, person);
+            expect(connections.length).toBe(COCO_POSE_INDEX_PAIRS.length);
+            // the shoulder bar joins keypoints 5 and 6
+            expect(connections).toContain({x1: 5, y1: 6, x2: 6, y2: 7});
+        }
+    });
+
+    it("keeps the person box, which a skeleton model otherwise hides", () => {
+        for (const modelId of POSE_MODEL_IDS) {
+            expect(boxRule(modelId)).toBe("box");
+        }
+    });
+
+    it("draws nothing for a person with missing keypoints", () => {
+        const modelId = POSE_MODEL_IDS[0];
+
+        expect(topologyConnections(modelId, person.slice(0, 16))).toEqual([]);
+    });
+
+    it("leaves other detectors without connections", () => {
+        for (const modelId of [
+            "yolo26s_coco_512x288",
+            "yolo26n_coco_512x288",
+        ]) {
+            expect(topologyConnections(modelId, person)).toEqual([]);
+            expect(modelDrawsSkeleton(modelId)).toBeFalse();
+        }
     });
 });
