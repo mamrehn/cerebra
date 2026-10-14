@@ -30,6 +30,7 @@ import {
     HAND_MODEL_IDS,
     boxRule,
     HEAD_POSE_MODEL_ID,
+    keypointVisible,
     LabelScalar,
     labelScalars,
     topologyConnections,
@@ -290,18 +291,31 @@ export class CameraComponent implements OnInit, OnDestroy {
     }
 
     keypoints(detection: Detection): OverlayKeypoint[] {
+        return this.keypointSlots(detection).filter(
+            (keypoint) =>
+                Number.isFinite(keypoint.x) && Number.isFinite(keypoint.y),
+        );
+    }
+
+    /**
+     * Every keypoint in message order. One the model scores as not visible
+     * keeps its slot without a position, so a skeleton joined by index stays
+     * aligned and leaves out that keypoint's segments.
+     */
+    keypointSlots(detection: Detection): OverlayKeypoint[] {
         const count = Math.min(
             detection.keypoint_x.length,
             detection.keypoint_y.length,
         );
-        return Array.from({length: count}, (_, index) => ({
-            name: detection.keypoint_names[index] ?? `Landmark ${index + 1}`,
-            x: detection.keypoint_x[index],
-            y: detection.keypoint_y[index],
-        })).filter(
-            (keypoint) =>
-                Number.isFinite(keypoint.x) && Number.isFinite(keypoint.y),
-        );
+        return Array.from({length: count}, (_, index) => {
+            const visible = keypointVisible(detection.keypoint_score, index);
+            return {
+                name:
+                    detection.keypoint_names[index] ?? `Landmark ${index + 1}`,
+                x: visible ? detection.keypoint_x[index] : Number.NaN,
+                y: visible ? detection.keypoint_y[index] : Number.NaN,
+            };
+        });
     }
 
     showsBox(modelId: string, detection: Detection): boolean {
@@ -325,7 +339,7 @@ export class CameraComponent implements OnInit, OnDestroy {
     }
 
     connections(modelId: string, detection: Detection): OverlayConnection[] {
-        return topologyConnections(modelId, this.keypoints(detection));
+        return topologyConnections(modelId, this.keypointSlots(detection));
     }
 
     /** Scalars drawn below the box: the ones the label does not carry. */

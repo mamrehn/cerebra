@@ -68,6 +68,21 @@ export const COCO_POSE_INDEX_PAIRS: ReadonlyArray<readonly [number, number]> = [
     [3, 5],
     [4, 6],
 ];
+/**
+ * Pose models place hidden joints too, with a low score. pib-backend's b3 fork
+ * sends that score per keypoint in `keypoint_score`; below this a keypoint
+ * counts as not visible, the same threshold as the course's `sichtbar()`.
+ */
+export const KEYPOINT_MIN_SCORE = 0.3;
+
+/** Whether keypoint `index` is visible. Without scores every keypoint is. */
+export function keypointVisible(
+    scores: ReadonlyArray<number> | undefined,
+    index: number,
+): boolean {
+    const score = scores?.[index];
+    return score === undefined || !(score < KEYPOINT_MIN_SCORE);
+}
 
 /** Five canonical contour groups: jaw, brows, nose, eyes, and lips. */
 export const FACIAL_LANDMARKS_68_CONTOURS: ReadonlyArray<

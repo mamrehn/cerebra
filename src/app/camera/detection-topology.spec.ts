@@ -3,6 +3,8 @@ import {
     COCO_POSE_INDEX_PAIRS,
     COCO_POSE_KEYPOINT_COUNT,
     HAND_MODEL_IDS,
+    KEYPOINT_MIN_SCORE,
+    keypointVisible,
     labelScalars,
     FACIAL_LANDMARKS_68_CONTOURS,
     FACIAL_LANDMARKS_68_INDEX_PAIRS,
@@ -218,6 +220,14 @@ describe("body pose topology", () => {
         const modelId = POSE_MODEL_IDS[0];
 
         expect(topologyConnections(modelId, person.slice(0, 16))).toEqual([]);
+    });
+
+    it("counts a keypoint as visible from a score of 0.3, and without scores", () => {
+        expect(KEYPOINT_MIN_SCORE).toBe(0.3);
+        expect(keypointVisible(undefined, 4)).toBeTrue();
+        expect(keypointVisible([], 4)).toBeTrue();
+        expect(keypointVisible([0.9, 0.29], 1)).toBeFalse();
+        expect(keypointVisible([0.9, 0.3], 1)).toBeTrue();
     });
 
     it("leaves other detectors without connections", () => {

@@ -9,6 +9,8 @@ export interface Detection {
     keypoint_x: number[];
     keypoint_y: number[];
     keypoint_z: number[];
+    /** pib-backend's b3 fork: one confidence per keypoint, empty when the model gives none. */
+    keypoint_score?: number[];
     scalar_names: string[];
     scalar_values: number[];
 }

@@ -981,6 +981,39 @@ describe("CameraComponent", () => {
         });
     });
 
+    it("should leave out a pose keypoint the model scores as not visible", () => {
+        const indices = Array.from({length: 17}, (_, index) => index);
+        const detection: Detection = {
+            label: "person",
+            score: 0.9,
+            x_min: 0,
+            y_min: 0,
+            x_max: 200,
+            y_max: 200,
+            keypoint_names: indices.map((index) => `keypoint_${index}`),
+            keypoint_x: indices.map((index) => index * 10),
+            keypoint_y: indices.map((index) => index * 10 + 1),
+            keypoint_z: [],
+            keypoint_score: indices.map((index) => (index === 9 ? 0.1 : 0.9)),
+            scalar_names: [],
+            scalar_values: [],
+        };
+
+        const connections = component.connections(
+            "yolo26s_pose_coco_512x288",
+            detection,
+        );
+
+        // Only the left forearm (7-9) ends in keypoint 9; the shoulder bar
+        // (5-6) still joins the right points.
+        expect(connections.length).toBe(18);
+        expect(connections).toContain({x1: 50, y1: 51, x2: 60, y2: 61});
+        expect(component.keypoints(detection).length).toBe(16);
+        expect(
+            component.keypoints(detection).map((keypoint) => keypoint.name),
+        ).not.toContain("keypoint_9");
+    });
+
     it("should return no connections for a face-style detection with 5 unnamed keypoints", () => {
         const detection = unnamedDetection(5);
         expect(component.connections("hand_tracking", detection)).toEqual([]);
