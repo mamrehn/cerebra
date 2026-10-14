@@ -13,6 +13,11 @@ import {RosService} from "../../shared/services/ros-service/ros.service";
 const READABLE_MODEL_NAMES: ReadonlyArray<readonly [string, string]> = [
     ["face_detection_yunet_160x120", "Face detection"],
     ["yolov6n_coco_640x640", "Object detection"],
+    // pib-backend's b3 fork: YOLO26 in two sizes, s by default, n twice as fast.
+    ["yolo26s_coco_512x288", "Object detection (YOLO26s)"],
+    ["yolo26n_coco_512x288", "Object detection (YOLO26n)"],
+    ["yolo26s_pose_coco_512x288", "Pose estimation (YOLO26s)"],
+    ["yolo26n_pose_coco_512x288", "Pose estimation (YOLO26n)"],
     ["hand_tracking_fast", "Hand tracking"],
     ["emotion_recognition_crop", "Emotion recognition"],
     ["head_pose_estimation_crop", "Head pose estimation"],

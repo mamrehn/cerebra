@@ -236,6 +236,29 @@ describe("ModelListComponent", () => {
         expect(component.statuses.size).toBe(0);
     }));
 
+    it("names the YOLO26 models by size and lists them after YOLOv6n", () => {
+        showModels(
+            [
+                named("yolo26n_pose_coco_512x288", 4, "pose_estimation"),
+                named("yolo26n_coco_512x288", 4, "object_detection"),
+                named("hand_tracking_fast", 9, "hand_tracking"),
+                named("yolo26s_pose_coco_512x288", 4, "pose_estimation"),
+                named("yolo26s_coco_512x288", 4, "object_detection"),
+                named("yolov6n_coco_640x640", 4, "object_detection"),
+            ],
+            16,
+        );
+
+        expect(labels()).toEqual([
+            "Object detection",
+            "Object detection (YOLO26s)",
+            "Object detection (YOLO26n)",
+            "Pose estimation (YOLO26s)",
+            "Pose estimation (YOLO26n)",
+            "Hand tracking",
+        ]);
+    });
+
     it("lists the six readable names in order and keeps an unknown model after them", () => {
         const unknown = named("custom_classifier", 5, "custom task");
         // Manifest order, deliberately not the display order. The unknown model
